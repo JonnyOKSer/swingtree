@@ -68,82 +68,32 @@ function TennisBallAsh({ position, speed }: { position: [number, number, number]
   )
 }
 
-// Lightning bolt with glow effect
-function Lightning({ position, delay, scale }: { position: [number, number, number]; delay: number; scale: number }) {
-  const boltRef = useRef<THREE.MeshBasicMaterial>(null)
-  const glowRef = useRef<THREE.MeshBasicMaterial>(null)
-
-  useFrame((state) => {
-    if (!boltRef.current || !glowRef.current) return
-    const time = state.clock.elapsedTime
-    const cycle = (time + delay) % 4
-
-    let opacity = 0
-    if (cycle < 0.05) {
-      opacity = 1
-    } else if (cycle < 0.1) {
-      opacity = 0.2
-    } else if (cycle < 0.15) {
-      opacity = 0.9
-    } else if (cycle < 0.2) {
-      opacity = 0.4
-    } else if (cycle < 0.25) {
-      opacity = 0
-    }
-
-    boltRef.current.opacity = opacity
-    glowRef.current.opacity = opacity * 0.4
-  })
-
-  const shape = useMemo(() => {
-    const s = new THREE.Shape()
-    s.moveTo(0, 0)
-    s.lineTo(0.15, 0.4)
-    s.lineTo(0.08, 0.4)
-    s.lineTo(0.22, 0.8)
-    s.lineTo(0.12, 0.8)
-    s.lineTo(0.3, 1.3)
-    s.lineTo(0.08, 0.7)
-    s.lineTo(0.15, 0.7)
-    s.lineTo(0.02, 0.35)
-    s.lineTo(0.1, 0.35)
-    s.closePath()
-    return s
-  }, [])
-
-  return (
-    <group position={position} scale={[scale, scale, 1]}>
-      <mesh position={[0, 0, -0.1]} scale={[1.5, 1.5, 1]}>
-        <shapeGeometry args={[shape]} />
-        <meshBasicMaterial ref={glowRef} color="#ffaa44" transparent opacity={0} />
-      </mesh>
-      <mesh>
-        <shapeGeometry args={[shape]} />
-        <meshBasicMaterial ref={boltRef} color="#ffffff" transparent opacity={0} />
-      </mesh>
-    </group>
-  )
-}
-
-// Horizon glow that pulses with lightning
+// Gentle horizon glow that pulses slowly
 function HorizonGlow() {
   const materialRef = useRef<THREE.ShaderMaterial>(null)
 
   useFrame((state) => {
     if (!materialRef.current) return
     const time = state.clock.elapsedTime
-    const cycle1 = time % 4
-    const cycle2 = (time + 2) % 4
+    // Flash once every 10 seconds, with slow fade in/out
+    const cycle = time % 10
     let flash = 0
-    if (cycle1 < 0.25 || cycle2 < 0.25) {
-      flash = 0.3
+    if (cycle < 1.5) {
+      // Slow fade in and out over 1.5 seconds
+      if (cycle < 0.5) {
+        flash = cycle / 0.5 * 0.25 // Fade in
+      } else if (cycle < 1.0) {
+        flash = 0.25 // Hold
+      } else {
+        flash = (1.5 - cycle) / 0.5 * 0.25 // Fade out
+      }
     }
     materialRef.current.uniforms.uFlash.value = flash
   })
 
   return (
-    <mesh position={[0, -1.2, -9]}>
-      <planeGeometry args={[50, 1.5]} />
+    <mesh position={[0, -0.8, -9]}>
+      <planeGeometry args={[50, 3]} />
       <shaderMaterial
         ref={materialRef}
         transparent
@@ -162,8 +112,10 @@ function HorizonGlow() {
           varying vec2 vUv;
           void main() {
             float glow = smoothstep(0.0, 1.0, 1.0 - vUv.y);
-            vec3 color = vec3(1.0, 0.6, 0.2) * glow * (0.15 + uFlash);
-            gl_FragColor = vec4(color, glow * 0.5);
+            vec3 baseColor = vec3(0.95, 0.5, 0.15);
+            vec3 flashColor = vec3(1.0, 0.65, 0.25);
+            vec3 color = mix(baseColor, flashColor, uFlash * 2.0) * glow * (0.12 + uFlash);
+            gl_FragColor = vec4(color, glow * 0.4);
           }
         `}
       />
@@ -490,9 +442,6 @@ function Scene() {
           size={ball.size}
         />
       ))}
-
-      <Lightning position={[-4, -0.5, -8]} delay={0} scale={0.7} />
-      <Lightning position={[5, -0.4, -8.5]} delay={2} scale={0.5} />
 
       {tennisBalls.map((ball, i) => (
         <TennisBallAsh key={`ball-${i}`} position={ball.position} speed={ball.speed} />
