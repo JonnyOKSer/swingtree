@@ -43,11 +43,12 @@
 }
 
 .tagline {
-  font-size: 18px;
+  font-size: 13px;
   color: var(--ash-grey);
-  font-style: italic;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
   margin: 0;
+  opacity: 0.8;
 }
 
 .code-form {

@@ -42,7 +42,7 @@ export default function GatedEntrance() {
 
       <div className="entrance-content">
         <h1 className="wordmark serif">ASHE</h1>
-        <p className="tagline">Play from the tree tops.</p>
+        <p className="tagline mono">Autonomous Signal Harvesting Engine</p>
 
         <form onSubmit={handleSubmit} className={`code-form ${shake ? 'shake' : ''}`}>
           <input
