@@ -143,8 +143,8 @@ export default function WorldMap({ onTournamentSelect }: WorldMapProps) {
     svg.selectAll('*').remove()
 
     // Create projection - Natural Earth for a pleasing look
-    // Scale to fill viewport height while maintaining aspect ratio
-    const scale = Math.min(width / 5, height / 2.5)
+    // Scale to fill viewport - use height as primary constraint
+    const scale = Math.min(width / 4.5, height / 2.1)
     const projection = d3.geoNaturalEarth1()
       .scale(scale)
       .translate([width / 2, height / 2])
@@ -219,7 +219,7 @@ export default function WorldMap({ onTournamentSelect }: WorldMapProps) {
       if (!containerRef.current) return
       const newWidth = containerRef.current.clientWidth
       const newHeight = containerRef.current.clientHeight
-      const newScale = Math.min(newWidth / 5, newHeight / 2.5)
+      const newScale = Math.min(newWidth / 4.5, newHeight / 2.1)
 
       svg.attr('width', newWidth).attr('height', newHeight)
 
