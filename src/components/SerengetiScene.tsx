@@ -238,38 +238,92 @@ function Stars() {
   )
 }
 
-// Bioluminescent mushroom glow on the ground
-function GroundGlow({ position, phase, size }: { position: [number, number, number]; phase: number; size: number }) {
-  const materialRef = useRef<THREE.MeshBasicMaterial>(null)
+// Landed tennis ball on the ground with glowing seam
+function GroundTennisBall({ position, phase, size, rotation }: {
+  position: [number, number, number]
+  phase: number
+  size: number
+  rotation: number
+}) {
+  const glowRef = useRef<THREE.MeshBasicMaterial>(null)
+  const seamRef = useRef<THREE.MeshBasicMaterial>(null)
+  const seam2Ref = useRef<THREE.MeshBasicMaterial>(null)
 
   useFrame((state) => {
-    if (!materialRef.current) return
     // Gentle pulsing at different rates
-    const pulse = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(state.clock.elapsedTime * (0.3 + phase * 0.2) + phase))
-    materialRef.current.opacity = pulse * 0.6
+    const pulse = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(state.clock.elapsedTime * (0.3 + phase * 0.15) + phase))
+    if (glowRef.current) {
+      glowRef.current.opacity = pulse * 0.5
+    }
+    if (seamRef.current) {
+      seamRef.current.opacity = pulse * 0.95
+    }
+    if (seam2Ref.current) {
+      seam2Ref.current.opacity = pulse * 0.8
+    }
   })
 
+  // Create tennis ball seam curve (the characteristic curved line)
+  const seamCurve = useMemo(() => {
+    const points: THREE.Vector3[] = []
+    const segments = 64
+    for (let i = 0; i <= segments; i++) {
+      const t = (i / segments) * Math.PI * 2
+      // Tennis ball seam follows a 3D sinusoidal path around the sphere
+      const r = size * 1.01 // Slightly outside the ball
+      const x = Math.cos(t) * r
+      const y = Math.sin(t * 2) * r * 0.35
+      const z = Math.sin(t) * r
+      points.push(new THREE.Vector3(x, y, z))
+    }
+    return new THREE.CatmullRomCurve3(points, true)
+  }, [size])
+
+  // Create tube geometry for the seam
+  const seamGeometry = useMemo(() => {
+    return new THREE.TubeGeometry(seamCurve, 64, size * 0.08, 6, true)
+  }, [seamCurve, size])
+
   return (
-    <group position={position}>
-      {/* Outer glow */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[size * 3, 16]} />
+    <group position={position} rotation={[0, rotation, 0]}>
+      {/* Ground glow beneath the ball */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -size * 0.95, 0]}>
+        <circleGeometry args={[size * 2.5, 16]} />
         <meshBasicMaterial
-          ref={materialRef}
-          color="#c4973b"
+          ref={glowRef}
+          color="#b8c43b"
           transparent
-          opacity={0.3}
+          opacity={0.4}
         />
       </mesh>
-      {/* Inner bright core */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]}>
-        <circleGeometry args={[size, 12]} />
+
+      {/* Tennis ball body - subtle dark sphere */}
+      <mesh>
+        <sphereGeometry args={[size, 24, 24]} />
+        <meshBasicMaterial color="#1a1a10" transparent opacity={0.8} />
+      </mesh>
+
+      {/* Glowing tennis ball seam */}
+      <mesh geometry={seamGeometry}>
         <meshBasicMaterial
-          color="#ffcc66"
+          ref={seamRef}
+          color="#c8d44b"
           transparent
-          opacity={0.5}
+          opacity={0.9}
         />
       </mesh>
+
+      {/* Second seam (rotated 90 degrees) */}
+      <group rotation={[Math.PI / 2, 0, 0]}>
+        <mesh geometry={seamGeometry}>
+          <meshBasicMaterial
+            ref={seam2Ref}
+            color="#c8d44b"
+            transparent
+            opacity={0.7}
+          />
+        </mesh>
+      </group>
     </group>
   )
 }
@@ -363,16 +417,17 @@ function Scene() {
     }))
   }, [])
 
-  // Bioluminescent ground glows - scattered across foreground
-  const groundGlows = useMemo(() => {
-    return Array.from({ length: 18 }, () => ({
+  // Landed tennis balls on ground - scattered across foreground
+  const landedBalls = useMemo(() => {
+    return Array.from({ length: 12 }, () => ({
       position: [
-        (Math.random() - 0.5) * 12,
-        -1.49,
-        Math.random() * 3 - 1
+        (Math.random() - 0.5) * 10,
+        -1.42,
+        Math.random() * 2.5 - 0.5
       ] as [number, number, number],
       phase: Math.random() * Math.PI * 2,
-      size: Math.random() * 0.04 + 0.02
+      size: Math.random() * 0.06 + 0.04,
+      rotation: Math.random() * Math.PI * 2
     }))
   }, [])
 
@@ -422,13 +477,14 @@ function Scene() {
       <HorizonGlow />
       <AcaciaTree />
 
-      {/* Bioluminescent ground glows */}
-      {groundGlows.map((glow, i) => (
-        <GroundGlow
-          key={`glow-${i}`}
-          position={glow.position}
-          phase={glow.phase}
-          size={glow.size}
+      {/* Landed tennis balls glowing on ground */}
+      {landedBalls.map((ball, i) => (
+        <GroundTennisBall
+          key={`landed-${i}`}
+          position={ball.position}
+          phase={ball.phase}
+          size={ball.size}
+          rotation={ball.rotation}
         />
       ))}
 
