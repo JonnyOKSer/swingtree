@@ -176,15 +176,15 @@ export default function DrawSheet({
     fetchDraw()
   }, [tournamentName])
 
-  // Group matches by round
-  const rounds = ['R128', 'R64', 'R32', 'R16', 'QF', 'SF', 'F']
-  const matchesByRound = rounds.reduce((acc, r) => {
+  // Group matches by round (left to right: early rounds -> final)
+  const roundOrder = ['R128', 'R64', 'R32', 'R16', 'QF', 'SF', 'F']
+  const matchesByRound = roundOrder.reduce((acc, r) => {
     acc[r] = matches.filter(m => m.round === r)
     return acc
   }, {} as Record<string, Match[]>)
 
-  // Only show rounds that have matches
-  const activeRounds = rounds.filter(r => matchesByRound[r].length > 0)
+  // Only show rounds that have matches (already in correct left-to-right order)
+  const activeRounds = roundOrder.filter(r => matchesByRound[r].length > 0)
 
   return (
     <div className="draw-overlay" onClick={onClose}>
