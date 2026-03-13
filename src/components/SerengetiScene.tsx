@@ -9,15 +9,11 @@ function AshParticle({ position, speed }: { position: [number, number, number]; 
 
   useFrame((state) => {
     if (!ref.current) return
-    // Fall slowly
     ref.current.position.y -= speed * 0.01
-    // Gentle sway
     ref.current.position.x += Math.sin(state.clock.elapsedTime + position[0]) * 0.001
-    // Reset when below ground
     if (ref.current.position.y < -2) {
       ref.current.position.y = initialY + 4
     }
-    // Slow rotation
     ref.current.rotation.z += 0.002
   })
 
@@ -34,7 +30,6 @@ function TennisBallAsh({ position, speed }: { position: [number, number, number]
   const groupRef = useRef<THREE.Group>(null)
   const initialY = position[1]
 
-  // Generate points on a sphere surface to form tennis ball shape
   const particles = useMemo(() => {
     const points: [number, number, number][] = []
     const radius = 0.15
@@ -52,15 +47,11 @@ function TennisBallAsh({ position, speed }: { position: [number, number, number]
 
   useFrame((state) => {
     if (!groupRef.current) return
-    // Fall slowly
     groupRef.current.position.y -= speed * 0.008
-    // Gentle sway
     groupRef.current.position.x += Math.sin(state.clock.elapsedTime * 0.5 + position[0]) * 0.002
-    // Reset when below ground
     if (groupRef.current.position.y < -3) {
       groupRef.current.position.y = initialY + 6
     }
-    // Slow rotation
     groupRef.current.rotation.y += 0.003
     groupRef.current.rotation.x += 0.001
   })
@@ -77,152 +68,257 @@ function TennisBallAsh({ position, speed }: { position: [number, number, number]
   )
 }
 
-// Lightning bolt that flashes on the horizon
-function Lightning() {
-  const ref = useRef<THREE.Mesh>(null)
-  const materialRef = useRef<THREE.MeshBasicMaterial>(null)
+// Lightning bolt with glow effect
+function Lightning({ position, delay, scale }: { position: [number, number, number]; delay: number; scale: number }) {
+  const boltRef = useRef<THREE.MeshBasicMaterial>(null)
+  const glowRef = useRef<THREE.MeshBasicMaterial>(null)
 
   useFrame((state) => {
-    if (!materialRef.current) return
-    // Flash every 3 seconds with some randomness
+    if (!boltRef.current || !glowRef.current) return
     const time = state.clock.elapsedTime
-    const cycle = time % 3.5
+    const cycle = (time + delay) % 4
 
-    if (cycle < 0.1) {
-      materialRef.current.opacity = 0.9
+    // Quick double-flash pattern
+    let opacity = 0
+    if (cycle < 0.05) {
+      opacity = 1
+    } else if (cycle < 0.1) {
+      opacity = 0.2
     } else if (cycle < 0.15) {
-      materialRef.current.opacity = 0.3
+      opacity = 0.9
     } else if (cycle < 0.2) {
-      materialRef.current.opacity = 0.7
+      opacity = 0.4
     } else if (cycle < 0.25) {
-      materialRef.current.opacity = 0
-    } else {
-      materialRef.current.opacity = 0
+      opacity = 0
     }
+
+    boltRef.current.opacity = opacity
+    glowRef.current.opacity = opacity * 0.4
   })
 
-  // Create lightning bolt shape
+  // Jagged lightning bolt shape
   const shape = useMemo(() => {
     const s = new THREE.Shape()
     s.moveTo(0, 0)
-    s.lineTo(0.1, 0.3)
-    s.lineTo(0.05, 0.3)
-    s.lineTo(0.15, 0.6)
-    s.lineTo(0.08, 0.6)
-    s.lineTo(0.2, 1)
-    s.lineTo(0.05, 0.5)
-    s.lineTo(0.1, 0.5)
-    s.lineTo(-0.02, 0.2)
-    s.lineTo(0.05, 0.2)
-    s.closePath()
-    return s
-  }, [])
-
-  return (
-    <mesh ref={ref} position={[-3, -0.3, -8]} scale={[0.8, 0.8, 1]}>
-      <shapeGeometry args={[shape]} />
-      <meshBasicMaterial ref={materialRef} color="#ffffff" transparent opacity={0} />
-    </mesh>
-  )
-}
-
-// Second lightning at different position
-function Lightning2() {
-  const materialRef = useRef<THREE.MeshBasicMaterial>(null)
-
-  useFrame((state) => {
-    if (!materialRef.current) return
-    const time = state.clock.elapsedTime
-    // Offset by 1.5 seconds from first lightning
-    const cycle = (time + 1.5) % 4
-
-    if (cycle < 0.08) {
-      materialRef.current.opacity = 0.7
-    } else if (cycle < 0.12) {
-      materialRef.current.opacity = 0.2
-    } else if (cycle < 0.18) {
-      materialRef.current.opacity = 0.5
-    } else {
-      materialRef.current.opacity = 0
-    }
-  })
-
-  const shape = useMemo(() => {
-    const s = new THREE.Shape()
-    s.moveTo(0, 0)
-    s.lineTo(0.08, 0.25)
-    s.lineTo(0.03, 0.25)
-    s.lineTo(0.12, 0.5)
-    s.lineTo(0.06, 0.5)
-    s.lineTo(0.15, 0.8)
-    s.lineTo(0.03, 0.4)
+    s.lineTo(0.15, 0.4)
     s.lineTo(0.08, 0.4)
-    s.lineTo(-0.02, 0.15)
-    s.lineTo(0.04, 0.15)
+    s.lineTo(0.22, 0.8)
+    s.lineTo(0.12, 0.8)
+    s.lineTo(0.3, 1.3)
+    s.lineTo(0.08, 0.7)
+    s.lineTo(0.15, 0.7)
+    s.lineTo(0.02, 0.35)
+    s.lineTo(0.1, 0.35)
     s.closePath()
     return s
   }, [])
 
   return (
-    <mesh position={[4, -0.2, -9]} scale={[0.6, 0.6, 1]}>
-      <shapeGeometry args={[shape]} />
-      <meshBasicMaterial ref={materialRef} color="#ffffee" transparent opacity={0} />
-    </mesh>
-  )
-}
-
-// Simple ash tree silhouette
-function AshTree() {
-  return (
-    <group position={[0, -1.5, -5]}>
-      {/* Trunk */}
-      <mesh position={[0, 0.8, 0]}>
-        <boxGeometry args={[0.15, 1.6, 0.1]} />
-        <meshBasicMaterial color="#1a1a1a" />
+    <group position={position} scale={[scale, scale, 1]}>
+      {/* Glow layer */}
+      <mesh position={[0, 0, -0.1]} scale={[1.5, 1.5, 1]}>
+        <shapeGeometry args={[shape]} />
+        <meshBasicMaterial ref={glowRef} color="#ffaa44" transparent opacity={0} />
       </mesh>
-      {/* Main canopy - layered for depth */}
-      <mesh position={[0, 2, 0]}>
-        <sphereGeometry args={[0.8, 16, 16]} />
-        <meshBasicMaterial color="#1a1a1a" />
-      </mesh>
-      <mesh position={[-0.4, 1.7, 0]}>
-        <sphereGeometry args={[0.5, 12, 12]} />
-        <meshBasicMaterial color="#1a1a1a" />
-      </mesh>
-      <mesh position={[0.5, 1.8, 0]}>
-        <sphereGeometry args={[0.45, 12, 12]} />
-        <meshBasicMaterial color="#1a1a1a" />
-      </mesh>
-      <mesh position={[0, 2.4, 0]}>
-        <sphereGeometry args={[0.4, 12, 12]} />
-        <meshBasicMaterial color="#1a1a1a" />
-      </mesh>
-      {/* Branches */}
-      <mesh position={[-0.3, 1.2, 0]} rotation={[0, 0, 0.5]}>
-        <boxGeometry args={[0.05, 0.5, 0.03]} />
-        <meshBasicMaterial color="#1a1a1a" />
-      </mesh>
-      <mesh position={[0.35, 1.3, 0]} rotation={[0, 0, -0.4]}>
-        <boxGeometry args={[0.05, 0.4, 0.03]} />
-        <meshBasicMaterial color="#1a1a1a" />
+      {/* Main bolt */}
+      <mesh>
+        <shapeGeometry args={[shape]} />
+        <meshBasicMaterial ref={boltRef} color="#ffffff" transparent opacity={0} />
       </mesh>
     </group>
   )
 }
 
-// Ground/horizon
+// Horizon glow that pulses with lightning
+function HorizonGlow() {
+  const materialRef = useRef<THREE.ShaderMaterial>(null)
+
+  useFrame((state) => {
+    if (!materialRef.current) return
+    const time = state.clock.elapsedTime
+
+    // Check if any lightning is flashing
+    const cycle1 = time % 4
+    const cycle2 = (time + 2) % 4
+    let flash = 0
+    if (cycle1 < 0.25 || cycle2 < 0.25) {
+      flash = 0.3
+    }
+
+    materialRef.current.uniforms.uFlash.value = flash
+  })
+
+  return (
+    <mesh position={[0, -1.2, -9]}>
+      <planeGeometry args={[30, 1]} />
+      <shaderMaterial
+        ref={materialRef}
+        transparent
+        uniforms={{
+          uFlash: { value: 0 }
+        }}
+        vertexShader={`
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `}
+        fragmentShader={`
+          uniform float uFlash;
+          varying vec2 vUv;
+          void main() {
+            float glow = smoothstep(0.0, 1.0, 1.0 - vUv.y);
+            vec3 color = vec3(1.0, 0.6, 0.2) * glow * (0.15 + uFlash);
+            gl_FragColor = vec4(color, glow * 0.5);
+          }
+        `}
+      />
+    </mesh>
+  )
+}
+
+// Twinkling stars
+function Stars() {
+  const starsRef = useRef<THREE.Points>(null)
+
+  const [positions, phases] = useMemo(() => {
+    const pos: number[] = []
+    const ph: number[] = []
+    for (let i = 0; i < 200; i++) {
+      // Spread across upper portion of sky
+      pos.push(
+        (Math.random() - 0.5) * 25,
+        Math.random() * 5 + 1.5, // Upper half
+        -9.5
+      )
+      ph.push(Math.random() * Math.PI * 2)
+    }
+    return [new Float32Array(pos), ph]
+  }, [])
+
+  const sizes = useMemo(() => {
+    const s: number[] = []
+    for (let i = 0; i < 200; i++) {
+      s.push(Math.random() * 2 + 0.5)
+    }
+    return new Float32Array(s)
+  }, [])
+
+  useFrame((state) => {
+    if (!starsRef.current) return
+    const colors = starsRef.current.geometry.attributes.color
+    if (!colors) return
+
+    const time = state.clock.elapsedTime
+    for (let i = 0; i < 200; i++) {
+      // Subtle twinkle
+      const twinkle = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(time * 0.5 + phases[i]))
+      colors.setXYZ(i, twinkle, twinkle, twinkle * 0.95)
+    }
+    colors.needsUpdate = true
+  })
+
+  const colors = useMemo(() => {
+    const c = new Float32Array(200 * 3)
+    for (let i = 0; i < 200; i++) {
+      c[i * 3] = 1
+      c[i * 3 + 1] = 1
+      c[i * 3 + 2] = 0.95
+    }
+    return c
+  }, [])
+
+  return (
+    <points ref={starsRef}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
+        <bufferAttribute attach="attributes-size" args={[sizes, 1]} />
+      </bufferGeometry>
+      <pointsMaterial
+        size={0.03}
+        vertexColors
+        transparent
+        opacity={0.8}
+        sizeAttenuation
+      />
+    </points>
+  )
+}
+
+// Acacia/umbrella tree silhouette - classic Serengeti shape
+function AcaciaTree() {
+  return (
+    <group position={[0, -1.5, -5]}>
+      {/* Trunk - slightly angled, organic */}
+      <mesh position={[0, 0.6, 0]} rotation={[0, 0, 0.03]}>
+        <cylinderGeometry args={[0.06, 0.1, 1.4, 8]} />
+        <meshBasicMaterial color="#0a0a0a" />
+      </mesh>
+
+      {/* Main branches spreading out */}
+      <mesh position={[-0.3, 1.2, 0]} rotation={[0, 0, 0.8]}>
+        <cylinderGeometry args={[0.03, 0.05, 0.8, 6]} />
+        <meshBasicMaterial color="#0a0a0a" />
+      </mesh>
+      <mesh position={[0.35, 1.15, 0]} rotation={[0, 0, -0.7]}>
+        <cylinderGeometry args={[0.03, 0.05, 0.9, 6]} />
+        <meshBasicMaterial color="#0a0a0a" />
+      </mesh>
+      <mesh position={[0.1, 1.3, 0]} rotation={[0, 0, -0.2]}>
+        <cylinderGeometry args={[0.02, 0.04, 0.5, 6]} />
+        <meshBasicMaterial color="#0a0a0a" />
+      </mesh>
+      <mesh position={[-0.15, 1.25, 0]} rotation={[0, 0, 0.3]}>
+        <cylinderGeometry args={[0.02, 0.04, 0.4, 6]} />
+        <meshBasicMaterial color="#0a0a0a" />
+      </mesh>
+
+      {/* Flat, wide canopy - the signature acacia umbrella shape */}
+      {/* Multiple flat ellipsoids layered */}
+      <mesh position={[0, 1.7, 0]} scale={[1, 0.25, 0.8]}>
+        <sphereGeometry args={[1.2, 24, 12]} />
+        <meshBasicMaterial color="#0a0a0a" />
+      </mesh>
+      <mesh position={[-0.3, 1.65, 0]} scale={[1, 0.2, 0.7]}>
+        <sphereGeometry args={[0.7, 16, 8]} />
+        <meshBasicMaterial color="#0a0a0a" />
+      </mesh>
+      <mesh position={[0.4, 1.68, 0]} scale={[1, 0.22, 0.7]}>
+        <sphereGeometry args={[0.6, 16, 8]} />
+        <meshBasicMaterial color="#0a0a0a" />
+      </mesh>
+      <mesh position={[0, 1.75, 0]} scale={[1, 0.18, 0.6]}>
+        <sphereGeometry args={[0.9, 16, 8]} />
+        <meshBasicMaterial color="#0a0a0a" />
+      </mesh>
+
+      {/* Some wispy edges */}
+      <mesh position={[-1.0, 1.6, 0]} scale={[0.8, 0.15, 0.5]}>
+        <sphereGeometry args={[0.4, 12, 6]} />
+        <meshBasicMaterial color="#0a0a0a" />
+      </mesh>
+      <mesh position={[1.1, 1.62, 0]} scale={[0.8, 0.15, 0.5]}>
+        <sphereGeometry args={[0.35, 12, 6]} />
+        <meshBasicMaterial color="#0a0a0a" />
+      </mesh>
+    </group>
+  )
+}
+
+// Ground/horizon with warmer tone
 function Ground() {
   return (
     <mesh position={[0, -1.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
       <planeGeometry args={[30, 20]} />
-      <meshBasicMaterial color="#2a2520" />
+      <meshBasicMaterial color="#1a1510" />
     </mesh>
   )
 }
 
 // Main scene
 function Scene() {
-  // Generate tennis ball ash particles
   const tennisBalls = useMemo(() => {
     return Array.from({ length: 15 }, () => ({
       position: [
@@ -234,7 +330,6 @@ function Scene() {
     }))
   }, [])
 
-  // Generate scattered ash particles
   const ashParticles = useMemo(() => {
     return Array.from({ length: 40 }, () => ({
       position: [
@@ -248,7 +343,7 @@ function Scene() {
 
   return (
     <>
-      {/* Serengeti gradient sky */}
+      {/* Serengeti gradient sky - warmer horizon */}
       <mesh position={[0, 0, -10]}>
         <planeGeometry args={[30, 15]} />
         <shaderMaterial
@@ -262,28 +357,48 @@ function Scene() {
           fragmentShader={`
             varying vec2 vUv;
             void main() {
-              // Serengeti dusk: deep charcoal at top, warm gold at horizon
-              vec3 topColor = vec3(0.08, 0.08, 0.1);
-              vec3 midColor = vec3(0.25, 0.15, 0.1);
-              vec3 horizonColor = vec3(0.77, 0.59, 0.23);
+              // Deep night sky at top
+              vec3 nightColor = vec3(0.04, 0.04, 0.08);
+              // Rich purple-blue transition
+              vec3 duskColor = vec3(0.12, 0.08, 0.15);
+              // Warm amber band
+              vec3 amberColor = vec3(0.5, 0.25, 0.1);
+              // Hot orange at horizon edge
+              vec3 horizonColor = vec3(0.9, 0.45, 0.1);
+              // Deep orange-red at very bottom
+              vec3 glowColor = vec3(0.95, 0.35, 0.05);
 
               float t = vUv.y;
               vec3 color;
-              if (t < 0.3) {
-                color = mix(horizonColor, midColor, t / 0.3);
+
+              if (t < 0.08) {
+                // Hot glow right at horizon
+                color = mix(glowColor, horizonColor, t / 0.08);
+              } else if (t < 0.18) {
+                // Orange to amber
+                color = mix(horizonColor, amberColor, (t - 0.08) / 0.1);
+              } else if (t < 0.35) {
+                // Amber to dusk purple
+                color = mix(amberColor, duskColor, (t - 0.18) / 0.17);
               } else {
-                color = mix(midColor, topColor, (t - 0.3) / 0.7);
+                // Dusk to night
+                color = mix(duskColor, nightColor, (t - 0.35) / 0.65);
               }
+
               gl_FragColor = vec4(color, 1.0);
             }
           `}
         />
       </mesh>
 
+      <Stars />
       <Ground />
-      <AshTree />
-      <Lightning />
-      <Lightning2 />
+      <HorizonGlow />
+      <AcaciaTree />
+
+      {/* Lightning bolts at different positions */}
+      <Lightning position={[-4, -0.5, -8]} delay={0} scale={0.7} />
+      <Lightning position={[5, -0.4, -8.5]} delay={2} scale={0.5} />
 
       {/* Tennis ball shaped ash clusters */}
       {tennisBalls.map((ball, i) => (
