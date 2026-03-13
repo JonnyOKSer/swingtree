@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import WorldMap from '../components/WorldMap'
+import DrawSheet from '../components/DrawSheet'
 import './Predict.css'
 
 interface Tournament {
@@ -50,32 +51,17 @@ export default function Predict() {
 
       <WorldMap onTournamentSelect={handleTournamentSelect} />
 
-      {/* Draw sheet overlay - placeholder for now */}
+      {/* Draw sheet overlay */}
       {selectedTournament && (
-        <div className="draw-overlay">
-          <div className="draw-sheet">
-            <div className="draw-header">
-              <div className="draw-title">
-                <h2>{selectedTournament.name}</h2>
-                <span className="draw-meta">
-                  {selectedTournament.category} • {selectedTournament.surface} • {selectedTournament.city}
-                </span>
-              </div>
-              <button className="close-draw" onClick={closeDraw}>×</button>
-            </div>
-            <div className="draw-content">
-              <p className="draw-placeholder">
-                Draw sheet with predictions coming soon
-              </p>
-              <p className="draw-placeholder-sub">
-                {selectedTournament.status === 'active'
-                  ? `Currently in ${selectedTournament.round}`
-                  : `Starts ${new Date(selectedTournament.startDate).toLocaleDateString()}`
-                }
-              </p>
-            </div>
-          </div>
-        </div>
+        <DrawSheet
+          tournamentName={selectedTournament.name}
+          category={selectedTournament.category}
+          surface={selectedTournament.surface}
+          city={selectedTournament.city}
+          round={selectedTournament.round}
+          status={selectedTournament.status}
+          onClose={closeDraw}
+        />
       )}
     </div>
   )

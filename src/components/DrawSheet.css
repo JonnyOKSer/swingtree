@@ -1,0 +1,375 @@
+/* Draw overlay */
+.draw-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.draw-sheet {
+  width: 95%;
+  max-width: 1400px;
+  height: 90%;
+  max-height: 900px;
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease-out;
+  overflow: hidden;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.draw-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 24px;
+  border-bottom: 1px solid #2a2a2a;
+  background: #1a1a1a;
+  flex-shrink: 0;
+}
+
+.draw-title h2 {
+  margin: 0 0 6px 0;
+  font-size: 22px;
+  font-weight: 500;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+
+.draw-meta {
+  font-size: 13px;
+  color: #8a8a7a;
+  letter-spacing: 1px;
+}
+
+.close-draw {
+  background: none;
+  border: none;
+  color: #8a8a7a;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.2s ease;
+}
+
+.close-draw:hover {
+  color: #ffffff;
+}
+
+/* Draw legend */
+.draw-legend {
+  display: flex;
+  gap: 24px;
+  padding: 12px 24px;
+  border-bottom: 1px solid #2a2a2a;
+  background: #151515;
+  flex-shrink: 0;
+}
+
+.draw-legend .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #8a8a7a;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.legend-box {
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+}
+
+.legend-box.confidence-strong {
+  background: var(--serengeti-gold);
+  box-shadow: 0 0 8px rgba(196, 151, 59, 0.4);
+}
+
+.legend-box.confidence-confident {
+  background: #5a5a4a;
+}
+
+.legend-box.confidence-pick {
+  background: transparent;
+  border: 1px solid #5a5a4a;
+}
+
+.legend-box.confidence-lean {
+  background: transparent;
+  border: 1px dashed #4a4a4a;
+}
+
+.divergence-icon {
+  font-size: 14px;
+}
+
+/* Bracket layout */
+.draw-bracket {
+  display: flex;
+  gap: 16px;
+  padding: 24px;
+  overflow-x: auto;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.round-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+}
+
+.round-header {
+  font-size: 12px;
+  font-weight: 500;
+  color: #8a8a7a;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  padding: 8px 0;
+  text-align: center;
+  border-bottom: 1px solid #2a2a2a;
+  margin-bottom: 16px;
+}
+
+.round-matches {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: space-around;
+  flex: 1;
+}
+
+/* Match card */
+.match-card {
+  background: #222222;
+  border: 1px solid #333333;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.match-card:hover {
+  background: #282828;
+  border-color: #444444;
+}
+
+.match-card.tbd {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.match-card.tbd:hover {
+  background: #222222;
+  border-color: #333333;
+}
+
+.match-slot {
+  padding: 6px 0;
+  color: #555555;
+  font-size: 12px;
+}
+
+/* Confidence styling */
+.match-card.confidence-strong {
+  border-left: 3px solid var(--serengeti-gold);
+  background: linear-gradient(90deg, rgba(196, 151, 59, 0.1) 0%, #222222 30%);
+}
+
+.match-card.confidence-confident {
+  border-left: 3px solid #6a6a5a;
+  background: linear-gradient(90deg, rgba(106, 106, 90, 0.1) 0%, #222222 30%);
+}
+
+.match-card.confidence-pick {
+  border-left: 3px solid #4a4a4a;
+}
+
+.match-card.confidence-lean {
+  border-left: 3px dashed #3a3a3a;
+  opacity: 0.8;
+}
+
+.match-card.confidence-skip {
+  opacity: 0.5;
+}
+
+/* Match status */
+.match-card.live {
+  border-color: var(--serengeti-gold);
+  box-shadow: 0 0 12px rgba(196, 151, 59, 0.2);
+}
+
+.match-card.completed {
+  opacity: 0.85;
+}
+
+/* Match header */
+.match-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  min-height: 18px;
+}
+
+.live-badge {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--serengeti-gold);
+  background: rgba(196, 151, 59, 0.15);
+  padding: 2px 6px;
+  border-radius: 2px;
+  letter-spacing: 1px;
+}
+
+.result-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.result-badge.correct {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.result-badge.incorrect {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.divergence-flag {
+  font-size: 12px;
+  color: #fbbf24;
+  cursor: help;
+}
+
+/* Player row */
+.player-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.player-row.predicted-winner {
+  color: #ffffff;
+}
+
+.player-row.actual-winner {
+  font-weight: 500;
+}
+
+.player-seed {
+  font-size: 10px;
+  color: #6a6a6a;
+  min-width: 16px;
+  text-align: right;
+}
+
+.player-name {
+  flex: 1;
+  color: #cccccc;
+}
+
+.player-row.predicted-winner .player-name {
+  color: #ffffff;
+}
+
+.player-country {
+  font-size: 10px;
+  color: #6a6a6a;
+}
+
+.prediction-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 2px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.prediction-badge.confidence-strong {
+  color: var(--serengeti-gold);
+  background: rgba(196, 151, 59, 0.2);
+}
+
+.prediction-badge.confidence-confident {
+  color: #a0a090;
+  background: rgba(160, 160, 144, 0.15);
+}
+
+.prediction-badge.confidence-pick {
+  color: #888888;
+  background: rgba(136, 136, 136, 0.1);
+}
+
+.prediction-badge.confidence-lean {
+  color: #666666;
+}
+
+.result-indicator {
+  font-size: 12px;
+  color: #4ade80;
+  margin-left: 4px;
+}
+
+/* Match score */
+.match-score {
+  font-size: 11px;
+  color: #8a8a7a;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #2a2a2a;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Match details (expanded) */
+.match-details {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #2a2a2a;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 11px;
+}
+
+.detail-label {
+  color: #6a6a6a;
+}
+
+.detail-value {
+  color: #aaaaaa;
+  font-family: 'JetBrains Mono', monospace;
+}
