@@ -238,92 +238,97 @@ function Stars() {
   )
 }
 
-// Landed tennis ball on the ground with glowing seam
-function GroundTennisBall({ position, phase, size, rotation }: {
+// Glowing tennis ball ember on the ground
+function GlowingTennisBall({ position, phase, size }: {
   position: [number, number, number]
   phase: number
   size: number
-  rotation: number
 }) {
+  const coreRef = useRef<THREE.MeshBasicMaterial>(null)
   const glowRef = useRef<THREE.MeshBasicMaterial>(null)
+  const outerGlowRef = useRef<THREE.MeshBasicMaterial>(null)
   const seamRef = useRef<THREE.MeshBasicMaterial>(null)
-  const seam2Ref = useRef<THREE.MeshBasicMaterial>(null)
 
   useFrame((state) => {
     // Gentle pulsing at different rates
-    const pulse = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(state.clock.elapsedTime * (0.3 + phase * 0.15) + phase))
+    const pulse = 0.6 + 0.4 * (0.5 + 0.5 * Math.sin(state.clock.elapsedTime * (0.4 + phase * 0.1) + phase))
+    if (coreRef.current) {
+      coreRef.current.opacity = pulse * 0.95
+    }
     if (glowRef.current) {
-      glowRef.current.opacity = pulse * 0.5
+      glowRef.current.opacity = pulse * 0.35
+    }
+    if (outerGlowRef.current) {
+      outerGlowRef.current.opacity = pulse * 0.15
     }
     if (seamRef.current) {
-      seamRef.current.opacity = pulse * 0.95
-    }
-    if (seam2Ref.current) {
-      seam2Ref.current.opacity = pulse * 0.8
+      seamRef.current.opacity = pulse * 0.25
     }
   })
 
-  // Create tennis ball seam curve (the characteristic curved line)
+  // Single subtle seam curve
   const seamCurve = useMemo(() => {
     const points: THREE.Vector3[] = []
-    const segments = 64
+    const segments = 32
     for (let i = 0; i <= segments; i++) {
       const t = (i / segments) * Math.PI * 2
-      // Tennis ball seam follows a 3D sinusoidal path around the sphere
-      const r = size * 1.01 // Slightly outside the ball
+      const r = size * 1.01
       const x = Math.cos(t) * r
-      const y = Math.sin(t * 2) * r * 0.35
+      const y = Math.sin(t * 2) * r * 0.25
       const z = Math.sin(t) * r
       points.push(new THREE.Vector3(x, y, z))
     }
     return new THREE.CatmullRomCurve3(points, true)
   }, [size])
 
-  // Create tube geometry for the seam
   const seamGeometry = useMemo(() => {
-    return new THREE.TubeGeometry(seamCurve, 64, size * 0.08, 6, true)
+    return new THREE.TubeGeometry(seamCurve, 32, size * 0.02, 4, true)
   }, [seamCurve, size])
 
   return (
-    <group position={position} rotation={[0, rotation, 0]}>
-      {/* Ground glow beneath the ball */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -size * 0.95, 0]}>
-        <circleGeometry args={[size * 2.5, 16]} />
+    <group position={position}>
+      {/* Outer ambient glow - largest, most diffuse */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -size * 0.8, 0]}>
+        <circleGeometry args={[size * 4, 16]} />
         <meshBasicMaterial
-          ref={glowRef}
-          color="#b8c43b"
+          ref={outerGlowRef}
+          color="#c8d96f"
           transparent
-          opacity={0.4}
+          opacity={0.12}
         />
       </mesh>
 
-      {/* Tennis ball body - subtle dark sphere */}
-      <mesh>
-        <sphereGeometry args={[size, 24, 24]} />
-        <meshBasicMaterial color="#1a1a10" transparent opacity={0.8} />
+      {/* Inner glow halo */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -size * 0.7, 0]}>
+        <circleGeometry args={[size * 2, 16]} />
+        <meshBasicMaterial
+          ref={glowRef}
+          color="#d4e07a"
+          transparent
+          opacity={0.3}
+        />
       </mesh>
 
-      {/* Glowing tennis ball seam */}
-      <mesh geometry={seamGeometry}>
+      {/* Glowing ball core - the main ember */}
+      <mesh>
+        <sphereGeometry args={[size, 16, 16]} />
         <meshBasicMaterial
-          ref={seamRef}
-          color="#c8d44b"
+          ref={coreRef}
+          color="#c8d96f"
           transparent
           opacity={0.9}
         />
       </mesh>
 
-      {/* Second seam (rotated 90 degrees) */}
-      <group rotation={[Math.PI / 2, 0, 0]}>
-        <mesh geometry={seamGeometry}>
-          <meshBasicMaterial
-            ref={seam2Ref}
-            color="#c8d44b"
-            transparent
-            opacity={0.7}
-          />
-        </mesh>
-      </group>
+      {/* Barely visible seam - just a hint */}
+      <mesh geometry={seamGeometry}>
+        <meshBasicMaterial
+          ref={seamRef}
+          color="#a0b050"
+          transparent
+          opacity={0.2}
+        />
+      </mesh>
     </group>
   )
 }
@@ -417,17 +422,16 @@ function Scene() {
     }))
   }, [])
 
-  // Landed tennis balls on ground - scattered across foreground
+  // Glowing tennis ball embers - scattered across foreground like accent lighting
   const landedBalls = useMemo(() => {
-    return Array.from({ length: 12 }, () => ({
+    return Array.from({ length: 16 }, () => ({
       position: [
-        (Math.random() - 0.5) * 10,
-        -1.42,
-        Math.random() * 2.5 - 0.5
+        (Math.random() - 0.5) * 12,
+        -1.47,
+        Math.random() * 3 - 0.5
       ] as [number, number, number],
       phase: Math.random() * Math.PI * 2,
-      size: Math.random() * 0.06 + 0.04,
-      rotation: Math.random() * Math.PI * 2
+      size: Math.random() * 0.015 + 0.018
     }))
   }, [])
 
@@ -477,14 +481,13 @@ function Scene() {
       <HorizonGlow />
       <AcaciaTree />
 
-      {/* Landed tennis balls glowing on ground */}
+      {/* Glowing tennis ball embers on ground */}
       {landedBalls.map((ball, i) => (
-        <GroundTennisBall
-          key={`landed-${i}`}
+        <GlowingTennisBall
+          key={`ember-${i}`}
           position={ball.position}
           phase={ball.phase}
           size={ball.size}
-          rotation={ball.rotation}
         />
       ))}
 
