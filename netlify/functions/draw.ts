@@ -83,7 +83,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       WHERE LOWER(tournament) LIKE $1
         AND prediction_date = (SELECT MAX(prediction_date) FROM prediction_log WHERE LOWER(tournament) LIKE $1)
       ORDER BY prediction_date DESC, round
-    `, [`%${tournamentSearch.toLowerCase()}%`, today])
+    `, [`%${tournamentSearch.toLowerCase()}%`])
 
     if (predictionsResult.rows.length === 0) {
       // Try to find in todays_matches
