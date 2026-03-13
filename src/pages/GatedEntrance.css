@@ -1,0 +1,125 @@
+.gated-entrance {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.gated-entrance.entering {
+  animation: fadeOut 0.8s ease-out forwards;
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.1);
+  }
+}
+
+.entrance-content {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.wordmark {
+  font-size: 72px;
+  font-weight: 400;
+  letter-spacing: 12px;
+  color: var(--flash-white);
+  text-shadow: 0 0 40px rgba(196, 151, 59, 0.3);
+  margin: 0;
+}
+
+.tagline {
+  font-size: 18px;
+  color: var(--ash-grey);
+  font-style: italic;
+  letter-spacing: 2px;
+  margin: 0;
+}
+
+.code-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 32px;
+}
+
+.code-form.shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+  20%, 40%, 60%, 80% { transform: translateX(8px); }
+}
+
+.code-input {
+  width: 240px;
+  padding: 14px 20px;
+  font-size: 16px;
+  letter-spacing: 3px;
+  text-align: center;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--ash-grey);
+  color: var(--flash-white);
+  outline: none;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.code-input:focus {
+  border-color: var(--serengeti-gold);
+  box-shadow: 0 0 20px var(--gold-dim);
+}
+
+.code-input::placeholder {
+  color: var(--ash-grey);
+  opacity: 0.5;
+}
+
+.enter-btn {
+  padding: 12px 48px;
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--ash-grey);
+  color: var(--flash-white);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.enter-btn:hover {
+  border-color: var(--serengeti-gold);
+  color: var(--serengeti-gold);
+  box-shadow: 0 0 20px var(--gold-dim);
+}
+
+.track-record-link {
+  margin-top: 24px;
+  font-size: 13px;
+  color: var(--ash-grey);
+  letter-spacing: 1px;
+  opacity: 0.7;
+  transition: opacity 0.3s ease, color 0.3s ease;
+}
+
+.track-record-link:hover {
+  opacity: 1;
+  color: var(--serengeti-gold);
+}
