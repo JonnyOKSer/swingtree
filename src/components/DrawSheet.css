@@ -373,3 +373,32 @@
   color: #aaaaaa;
   font-family: 'JetBrains Mono', monospace;
 }
+
+/* Loading, error, empty states */
+.draw-loading,
+.draw-error,
+.draw-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 300px;
+  color: #8a8a7a;
+  text-align: center;
+}
+
+.draw-loading p,
+.draw-error p,
+.draw-empty p {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: 1px;
+}
+
+.draw-error-sub,
+.draw-empty-sub {
+  margin-top: 8px !important;
+  font-size: 13px !important;
+  opacity: 0.7;
+}

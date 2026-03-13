@@ -31,6 +31,13 @@
   margin: 0;
 }
 
+.results-loading {
+  color: var(--ash-grey);
+  text-align: center;
+  padding: 48px;
+  letter-spacing: 1px;
+}
+
 .results-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

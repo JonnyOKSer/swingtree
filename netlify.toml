@@ -5,6 +5,17 @@
 [build.environment]
   NODE_VERSION = "20"
 
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# API routes (must come before SPA catch-all)
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# SPA fallback
 [[redirects]]
   from = "/*"
   to = "/index.html"

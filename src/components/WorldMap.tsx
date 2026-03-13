@@ -4,8 +4,8 @@ import * as topojson from 'topojson-client'
 import type { Topology, GeometryCollection } from 'topojson-specification'
 import './WorldMap.css'
 
-interface Tournament {
-  id: number
+export interface Tournament {
+  id: string
   name: string
   country: string
   countryCode: string
@@ -13,44 +13,16 @@ interface Tournament {
   surface: string
   category: string
   tour: string
-  startDate: string
-  endDate: string
+  startDate: string | null
+  endDate: string | null
   status: 'active' | 'upcoming'
   round: string | null
 }
 
-// Mock tournament data - will come from API
-const MOCK_TOURNAMENTS: Tournament[] = [
+// Fallback mock data when API is unavailable
+const FALLBACK_TOURNAMENTS: Tournament[] = [
   {
-    id: 1,
-    name: 'Australian Open',
-    country: 'Australia',
-    countryCode: 'AUS',
-    city: 'Melbourne',
-    surface: 'Hard',
-    category: 'Grand Slam',
-    tour: 'ATP/WTA',
-    startDate: '2026-01-19',
-    endDate: '2026-02-01',
-    status: 'upcoming',
-    round: null
-  },
-  {
-    id: 2,
-    name: 'Qatar Open',
-    country: 'Qatar',
-    countryCode: 'QAT',
-    city: 'Doha',
-    surface: 'Hard',
-    category: 'ATP 250',
-    tour: 'ATP',
-    startDate: '2026-03-10',
-    endDate: '2026-03-16',
-    status: 'active',
-    round: 'R16'
-  },
-  {
-    id: 3,
+    id: 'indian-wells',
     name: 'Indian Wells',
     country: 'United States of America',
     countryCode: 'USA',
@@ -58,80 +30,10 @@ const MOCK_TOURNAMENTS: Tournament[] = [
     surface: 'Hard',
     category: 'ATP 1000',
     tour: 'ATP/WTA',
-    startDate: '2026-03-12',
-    endDate: '2026-03-23',
+    startDate: null,
+    endDate: null,
     status: 'active',
     round: 'R32'
-  },
-  {
-    id: 4,
-    name: 'Dubai Championships',
-    country: 'United Arab Emirates',
-    countryCode: 'ARE',
-    city: 'Dubai',
-    surface: 'Hard',
-    category: 'WTA 1000',
-    tour: 'WTA',
-    startDate: '2026-03-15',
-    endDate: '2026-03-22',
-    status: 'upcoming',
-    round: null
-  },
-  {
-    id: 5,
-    name: 'Monte-Carlo Masters',
-    country: 'France',
-    countryCode: 'FRA',
-    city: 'Monte Carlo',
-    surface: 'Clay',
-    category: 'ATP 1000',
-    tour: 'ATP',
-    startDate: '2026-03-18',
-    endDate: '2026-03-25',
-    status: 'upcoming',
-    round: null
-  },
-  {
-    id: 6,
-    name: 'Miami Open',
-    country: 'United States of America',
-    countryCode: 'USA',
-    city: 'Miami',
-    surface: 'Hard',
-    category: 'ATP 1000',
-    tour: 'ATP/WTA',
-    startDate: '2026-03-24',
-    endDate: '2026-04-06',
-    status: 'upcoming',
-    round: null
-  },
-  {
-    id: 7,
-    name: 'Madrid Open',
-    country: 'Spain',
-    countryCode: 'ESP',
-    city: 'Madrid',
-    surface: 'Clay',
-    category: 'ATP 1000',
-    tour: 'ATP/WTA',
-    startDate: '2026-04-27',
-    endDate: '2026-05-10',
-    status: 'upcoming',
-    round: null
-  },
-  {
-    id: 8,
-    name: 'Italian Open',
-    country: 'Italy',
-    countryCode: 'ITA',
-    city: 'Rome',
-    surface: 'Clay',
-    category: 'ATP 1000',
-    tour: 'ATP/WTA',
-    startDate: '2026-05-11',
-    endDate: '2026-05-18',
-    status: 'upcoming',
-    round: null
   }
 ]
 
@@ -152,9 +54,28 @@ export default function WorldMap({ onTournamentSelect }: WorldMapProps) {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
   const [countryTournaments, setCountryTournaments] = useState<Tournament[]>([])
   const [panelPosition, setPanelPosition] = useState({ x: 0, y: 0 })
+  const [tournaments, setTournaments] = useState<Tournament[]>(FALLBACK_TOURNAMENTS)
+
+  // Fetch tournaments from API
+  useEffect(() => {
+    const fetchTournaments = async () => {
+      try {
+        const response = await fetch('/api/tournaments')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.tournaments?.length > 0) {
+            setTournaments(data.tournaments)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch tournaments:', error)
+      }
+    }
+    fetchTournaments()
+  }, [])
 
   // Get countries with active or upcoming tournaments
-  const activeCountries = new Set(MOCK_TOURNAMENTS.map(t => t.country))
+  const activeCountries = new Set(tournaments.map(t => t.country))
 
   useEffect(() => {
     if (!svgRef.current || !containerRef.current) return
@@ -209,8 +130,8 @@ export default function WorldMap({ onTournamentSelect }: WorldMapProps) {
           const normalizedName = COUNTRY_NAME_MAP[name] || name
 
           if (activeCountries.has(normalizedName)) {
-            const tournaments = MOCK_TOURNAMENTS.filter(t => t.country === normalizedName)
-            setCountryTournaments(tournaments)
+            const countryTourns = tournaments.filter(t => t.country === normalizedName)
+            setCountryTournaments(countryTourns)
             setSelectedCountry(normalizedName)
 
             // Position panel near click
@@ -261,14 +182,15 @@ export default function WorldMap({ onTournamentSelect }: WorldMapProps) {
 
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
-  }, [activeCountries])
+  }, [activeCountries, tournaments])
 
   const closePanel = () => {
     setSelectedCountry(null)
     setCountryTournaments([])
   }
 
-  const daysUntil = (dateStr: string) => {
+  const daysUntil = (dateStr: string | null) => {
+    if (!dateStr) return 0
     const date = new Date(dateStr)
     const now = new Date()
     const diff = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))

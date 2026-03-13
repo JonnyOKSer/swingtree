@@ -1,23 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import WorldMap from '../components/WorldMap'
+import WorldMap, { type Tournament } from '../components/WorldMap'
 import DrawSheet from '../components/DrawSheet'
 import './Predict.css'
-
-interface Tournament {
-  id: number
-  name: string
-  country: string
-  countryCode: string
-  city: string
-  surface: string
-  category: string
-  tour: string
-  startDate: string
-  endDate: string
-  status: 'active' | 'upcoming'
-  round: string | null
-}
 
 export default function Predict() {
   const navigate = useNavigate()
