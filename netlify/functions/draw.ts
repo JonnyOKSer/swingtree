@@ -1,5 +1,5 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
-import { getPool, TOURNAMENT_METADATA, levelToCategory } from './db'
+import { getPool } from './db'
 
 interface Player {
   name: string
@@ -31,6 +31,19 @@ interface Match {
   status: 'upcoming' | 'live' | 'completed'
 }
 
+interface TournamentInfo {
+  tournament_id: number
+  slug: string
+  name: string
+  country: string
+  country_code: string
+  city: string
+  surface: string
+  tourney_level: string
+  category: string
+  tour: string
+}
+
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -43,7 +56,6 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
   }
 
   try {
-    // Get tournament from path: /api/draw/tournament-name
     const pathParts = event.path.split('/')
     const tournamentSlug = pathParts[pathParts.length - 1]
 
@@ -56,105 +68,100 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     }
 
     const pool = getPool()
-    const today = new Date().toISOString().split('T')[0]
 
-    // Find tournament by slug (fuzzy match on name)
-    const tournamentSearch = tournamentSlug.replace(/-/g, ' ')
+    // First, try to find tournament in reference table by slug or alias
+    let tournamentInfo: TournamentInfo | null = null
 
-    // Get predictions for this tournament
+    // Check if tournaments table exists and find by slug
+    try {
+      const tournamentResult = await pool.query(`
+        SELECT t.tournament_id, t.slug, t.name, t.country, t.country_code,
+               t.city, t.surface, t.tourney_level, t.category, t.tour
+        FROM tournaments t
+        WHERE t.slug = $1
+        UNION
+        SELECT t.tournament_id, t.slug, t.name, t.country, t.country_code,
+               t.city, t.surface, t.tourney_level, t.category, t.tour
+        FROM tournaments t
+        JOIN tournament_aliases a ON t.tournament_id = a.tournament_id
+        WHERE LOWER(a.alias_name) = LOWER($2)
+        LIMIT 1
+      `, [tournamentSlug, tournamentSlug.replace(/-/g, ' ')])
+
+      if (tournamentResult.rows.length > 0) {
+        tournamentInfo = tournamentResult.rows[0]
+      }
+    } catch {
+      // tournaments table doesn't exist yet, fall back to fuzzy matching
+    }
+
+    // Build search pattern for prediction_log
+    const searchPattern = tournamentInfo
+      ? tournamentInfo.name.toLowerCase()
+      : tournamentSlug.replace(/-/g, ' ').toLowerCase()
+
+    // Get predictions, filtering by tourney_level if we have tournament info
+    // Only include G (Grand Slam), M (Masters), A (500), B (250) level events
     const predictionsResult = await pool.query(`
       SELECT
-        id,
-        tournament,
-        round,
-        player_a as player1_name,
-        player_b as player2_name,
-        predicted_winner,
-        predicted_prob,
-        confidence_tier,
-        first_set_winner,
-        first_set_score,
-        first_set_tiebreak_prob,
-        first_set_over_9_5_prob,
-        actual_winner,
-        correct,
-        COALESCE(tour, 'ATP') as tour
-      FROM prediction_log
-      WHERE LOWER(tournament) LIKE $1
-        AND prediction_date = (SELECT MAX(prediction_date) FROM prediction_log WHERE LOWER(tournament) LIKE $1)
-      ORDER BY prediction_date DESC, round
-    `, [`%${tournamentSearch.toLowerCase()}%`])
+        p.id,
+        p.tournament,
+        p.round,
+        p.player_a as player1_name,
+        p.player_b as player2_name,
+        p.predicted_winner,
+        p.predicted_prob,
+        p.confidence_tier,
+        p.first_set_winner,
+        p.first_set_score,
+        p.first_set_tiebreak_prob,
+        p.first_set_over_9_5_prob,
+        p.actual_winner,
+        p.correct,
+        COALESCE(p.tour, 'ATP') as tour
+      FROM prediction_log p
+      WHERE LOWER(p.tournament) LIKE $1
+        AND p.prediction_date = (
+          SELECT MAX(p2.prediction_date)
+          FROM prediction_log p2
+          WHERE LOWER(p2.tournament) LIKE $1
+            AND p2.confidence_tier != 'SKIP'
+        )
+        AND p.confidence_tier != 'SKIP'
+      ORDER BY
+        CASE p.round
+          WHEN 'R128' THEN 1 WHEN 'R64' THEN 2 WHEN 'R32' THEN 3
+          WHEN 'R16' THEN 4 WHEN 'QF' THEN 5 WHEN 'SF' THEN 6 WHEN 'F' THEN 7
+          ELSE 8
+        END,
+        p.id
+    `, [`%${searchPattern}%`])
 
     if (predictionsResult.rows.length === 0) {
-      // Try to find in todays_matches
-      const matchesResult = await pool.query(`
-        SELECT
-          tournament,
-          surface,
-          tourney_level,
-          round,
-          player_a_name,
-          player_b_name,
-          COALESCE(tour, 'ATP') as tour
-        FROM todays_matches
-        WHERE LOWER(tournament) LIKE $1
-          AND match_date >= $2::date - INTERVAL '7 days'
-        ORDER BY round
-      `, [`%${tournamentSearch.toLowerCase()}%`, today])
-
-      if (matchesResult.rows.length === 0) {
-        return {
-          statusCode: 404,
-          headers,
-          body: JSON.stringify({ success: false, error: 'Tournament not found' })
-        }
-      }
-
-      // Return matches without predictions
-      const tournamentName = matchesResult.rows[0].tournament
-      const metadata = TOURNAMENT_METADATA[tournamentName]
-
-      const matches: Match[] = matchesResult.rows.map((row, idx) => ({
-        id: `${row.round}-${idx}`,
-        round: row.round,
-        player1: { name: row.player_a_name, country: '' },
-        player2: { name: row.player_b_name, country: '' },
-        status: 'upcoming' as const
-      }))
-
       return {
-        statusCode: 200,
+        statusCode: 404,
         headers,
         body: JSON.stringify({
-          success: true,
-          tournament: {
-            name: tournamentName,
-            category: metadata?.category || 'ATP',
-            surface: matchesResult.rows[0].surface || 'Hard',
-            city: metadata?.city || tournamentName,
-            country: metadata?.country || 'Unknown'
-          },
-          matches
+          success: false,
+          error: 'No predictions found for this tournament',
+          hint: 'Predictions appear when matches are scheduled for today'
         })
       }
     }
 
-    // Process predictions into matches
-    const tournamentName = predictionsResult.rows[0].tournament
-    const metadata = TOURNAMENT_METADATA[tournamentName]
-    const tour = predictionsResult.rows[0].tour
+    // Use tournament info if available, otherwise derive from first result
+    const tournamentName = tournamentInfo?.name || predictionsResult.rows[0].tournament
+    const tour = tournamentInfo?.tour || predictionsResult.rows[0].tour
 
     const matches: Match[] = predictionsResult.rows.map((row, idx) => {
       const player1Name = row.player1_name
       const player2Name = row.player2_name
       const predictedWinner = row.predicted_winner
 
-      // Determine which player is the predicted winner
       const winner: 'player1' | 'player2' = predictedWinner === player1Name ? 'player1' : 'player2'
       const firstSetWinner: 'player1' | 'player2' = row.first_set_winner === player1Name ? 'player1' : 'player2'
       const divergence = winner !== firstSetWinner
 
-      // Map confidence tier
       const tierMap: Record<string, 'STRONG' | 'CONFIDENT' | 'PICK' | 'LEAN' | 'SKIP'> = {
         'STRONG': 'STRONG',
         'CONFIDENT': 'CONFIDENT',
@@ -164,7 +171,6 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       }
       const confidence = tierMap[row.confidence_tier] || 'PICK'
 
-      // Determine match status
       let status: 'upcoming' | 'live' | 'completed' = 'upcoming'
       let result = undefined
 
@@ -172,7 +178,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         status = 'completed'
         result = {
           winner: row.actual_winner === player1Name ? 'player1' as const : 'player2' as const,
-          score: '' // Score not stored in prediction_log
+          score: ''
         }
       }
 
@@ -198,29 +204,19 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       }
     })
 
-    // Get tournament surface from todays_matches or recent matches
-    let surface = 'Hard'
-    const surfaceResult = await pool.query(`
-      SELECT surface FROM todays_matches
-      WHERE LOWER(tournament) LIKE $1
-      LIMIT 1
-    `, [`%${tournamentSearch.toLowerCase()}%`])
-
-    if (surfaceResult.rows.length > 0) {
-      surface = surfaceResult.rows[0].surface
-    }
-
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
         tournament: {
+          id: tournamentInfo?.tournament_id,
+          slug: tournamentInfo?.slug || tournamentSlug,
           name: tournamentName,
-          category: metadata?.category || levelToCategory('A', tour),
-          surface,
-          city: metadata?.city || tournamentName,
-          country: metadata?.country || 'Unknown'
+          category: tournamentInfo?.category || tour,
+          surface: tournamentInfo?.surface || 'Hard',
+          city: tournamentInfo?.city || tournamentName,
+          country: tournamentInfo?.country || 'Unknown'
         },
         matches
       })
