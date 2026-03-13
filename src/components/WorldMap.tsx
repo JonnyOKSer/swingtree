@@ -80,8 +80,8 @@ const MOCK_TOURNAMENTS: Tournament[] = [
   {
     id: 5,
     name: 'Monte-Carlo Masters',
-    country: 'Monaco',
-    countryCode: 'MCO',
+    country: 'France',
+    countryCode: 'FRA',
     city: 'Monte Carlo',
     surface: 'Clay',
     category: 'ATP 1000',
@@ -102,6 +102,34 @@ const MOCK_TOURNAMENTS: Tournament[] = [
     tour: 'ATP/WTA',
     startDate: '2026-03-24',
     endDate: '2026-04-06',
+    status: 'upcoming',
+    round: null
+  },
+  {
+    id: 7,
+    name: 'Madrid Open',
+    country: 'Spain',
+    countryCode: 'ESP',
+    city: 'Madrid',
+    surface: 'Clay',
+    category: 'ATP 1000',
+    tour: 'ATP/WTA',
+    startDate: '2026-04-27',
+    endDate: '2026-05-10',
+    status: 'upcoming',
+    round: null
+  },
+  {
+    id: 8,
+    name: 'Italian Open',
+    country: 'Italy',
+    countryCode: 'ITA',
+    city: 'Rome',
+    surface: 'Clay',
+    category: 'ATP 1000',
+    tour: 'ATP/WTA',
+    startDate: '2026-05-11',
+    endDate: '2026-05-18',
     status: 'upcoming',
     round: null
   }
@@ -143,8 +171,8 @@ export default function WorldMap({ onTournamentSelect }: WorldMapProps) {
     svg.selectAll('*').remove()
 
     // Create projection - Natural Earth for a pleasing look
-    // Scale to fill viewport - use height as primary constraint
-    const scale = Math.min(width / 4.5, height / 2.1)
+    // Scale to show all continents without clipping
+    const scale = Math.min(width / 5.5, height / 2.8)
     const projection = d3.geoNaturalEarth1()
       .scale(scale)
       .translate([width / 2, height / 2])
@@ -219,7 +247,7 @@ export default function WorldMap({ onTournamentSelect }: WorldMapProps) {
       if (!containerRef.current) return
       const newWidth = containerRef.current.clientWidth
       const newHeight = containerRef.current.clientHeight
-      const newScale = Math.min(newWidth / 4.5, newHeight / 2.1)
+      const newScale = Math.min(newWidth / 5.5, newHeight / 2.8)
 
       svg.attr('width', newWidth).attr('height', newHeight)
 
