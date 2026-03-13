@@ -81,7 +81,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         COALESCE(tour, 'ATP') as tour
       FROM prediction_log
       WHERE LOWER(tournament) LIKE $1
-        AND prediction_date >= $2::date - INTERVAL '7 days'
+        AND prediction_date = (SELECT MAX(prediction_date) FROM prediction_log WHERE LOWER(tournament) LIKE $1)
       ORDER BY prediction_date DESC, round
     `, [`%${tournamentSearch.toLowerCase()}%`, today])
 
