@@ -78,7 +78,6 @@ function Lightning({ position, delay, scale }: { position: [number, number, numb
     const time = state.clock.elapsedTime
     const cycle = (time + delay) % 4
 
-    // Quick double-flash pattern
     let opacity = 0
     if (cycle < 0.05) {
       opacity = 1
@@ -96,7 +95,6 @@ function Lightning({ position, delay, scale }: { position: [number, number, numb
     glowRef.current.opacity = opacity * 0.4
   })
 
-  // Jagged lightning bolt shape
   const shape = useMemo(() => {
     const s = new THREE.Shape()
     s.moveTo(0, 0)
@@ -115,12 +113,10 @@ function Lightning({ position, delay, scale }: { position: [number, number, numb
 
   return (
     <group position={position} scale={[scale, scale, 1]}>
-      {/* Glow layer */}
       <mesh position={[0, 0, -0.1]} scale={[1.5, 1.5, 1]}>
         <shapeGeometry args={[shape]} />
         <meshBasicMaterial ref={glowRef} color="#ffaa44" transparent opacity={0} />
       </mesh>
-      {/* Main bolt */}
       <mesh>
         <shapeGeometry args={[shape]} />
         <meshBasicMaterial ref={boltRef} color="#ffffff" transparent opacity={0} />
@@ -136,21 +132,18 @@ function HorizonGlow() {
   useFrame((state) => {
     if (!materialRef.current) return
     const time = state.clock.elapsedTime
-
-    // Check if any lightning is flashing
     const cycle1 = time % 4
     const cycle2 = (time + 2) % 4
     let flash = 0
     if (cycle1 < 0.25 || cycle2 < 0.25) {
       flash = 0.3
     }
-
     materialRef.current.uniforms.uFlash.value = flash
   })
 
   return (
     <mesh position={[0, -1.2, -9]}>
-      <planeGeometry args={[30, 1]} />
+      <planeGeometry args={[50, 1.5]} />
       <shaderMaterial
         ref={materialRef}
         transparent
@@ -186,10 +179,9 @@ function Stars() {
     const pos: number[] = []
     const ph: number[] = []
     for (let i = 0; i < 200; i++) {
-      // Spread across upper portion of sky
       pos.push(
-        (Math.random() - 0.5) * 25,
-        Math.random() * 5 + 1.5, // Upper half
+        (Math.random() - 0.5) * 40,
+        Math.random() * 8 + 1,
         -9.5
       )
       ph.push(Math.random() * Math.PI * 2)
@@ -212,7 +204,6 @@ function Stars() {
 
     const time = state.clock.elapsedTime
     for (let i = 0; i < 200; i++) {
-      // Subtle twinkle
       const twinkle = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(time * 0.5 + phases[i]))
       colors.setXYZ(i, twinkle, twinkle, twinkle * 0.95)
     }
@@ -247,17 +238,51 @@ function Stars() {
   )
 }
 
-// Acacia/umbrella tree silhouette - classic Serengeti shape
+// Bioluminescent mushroom glow on the ground
+function GroundGlow({ position, phase, size }: { position: [number, number, number]; phase: number; size: number }) {
+  const materialRef = useRef<THREE.MeshBasicMaterial>(null)
+
+  useFrame((state) => {
+    if (!materialRef.current) return
+    // Gentle pulsing at different rates
+    const pulse = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(state.clock.elapsedTime * (0.3 + phase * 0.2) + phase))
+    materialRef.current.opacity = pulse * 0.6
+  })
+
+  return (
+    <group position={position}>
+      {/* Outer glow */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[size * 3, 16]} />
+        <meshBasicMaterial
+          ref={materialRef}
+          color="#c4973b"
+          transparent
+          opacity={0.3}
+        />
+      </mesh>
+      {/* Inner bright core */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]}>
+        <circleGeometry args={[size, 12]} />
+        <meshBasicMaterial
+          color="#ffcc66"
+          transparent
+          opacity={0.5}
+        />
+      </mesh>
+    </group>
+  )
+}
+
+// Acacia/umbrella tree silhouette
 function AcaciaTree() {
   return (
     <group position={[0, -1.5, -5]}>
-      {/* Trunk - slightly angled, organic */}
       <mesh position={[0, 0.6, 0]} rotation={[0, 0, 0.03]}>
         <cylinderGeometry args={[0.06, 0.1, 1.4, 8]} />
         <meshBasicMaterial color="#0a0a0a" />
       </mesh>
 
-      {/* Main branches spreading out */}
       <mesh position={[-0.3, 1.2, 0]} rotation={[0, 0, 0.8]}>
         <cylinderGeometry args={[0.03, 0.05, 0.8, 6]} />
         <meshBasicMaterial color="#0a0a0a" />
@@ -275,8 +300,6 @@ function AcaciaTree() {
         <meshBasicMaterial color="#0a0a0a" />
       </mesh>
 
-      {/* Flat, wide canopy - the signature acacia umbrella shape */}
-      {/* Multiple flat ellipsoids layered */}
       <mesh position={[0, 1.7, 0]} scale={[1, 0.25, 0.8]}>
         <sphereGeometry args={[1.2, 24, 12]} />
         <meshBasicMaterial color="#0a0a0a" />
@@ -294,7 +317,6 @@ function AcaciaTree() {
         <meshBasicMaterial color="#0a0a0a" />
       </mesh>
 
-      {/* Some wispy edges */}
       <mesh position={[-1.0, 1.6, 0]} scale={[0.8, 0.15, 0.5]}>
         <sphereGeometry args={[0.4, 12, 6]} />
         <meshBasicMaterial color="#0a0a0a" />
@@ -307,12 +329,12 @@ function AcaciaTree() {
   )
 }
 
-// Ground/horizon with warmer tone
+// Ground - larger to ensure full coverage
 function Ground() {
   return (
     <mesh position={[0, -1.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <planeGeometry args={[30, 20]} />
-      <meshBasicMaterial color="#1a1510" />
+      <planeGeometry args={[60, 40]} />
+      <meshBasicMaterial color="#0d0a08" />
     </mesh>
   )
 }
@@ -341,11 +363,24 @@ function Scene() {
     }))
   }, [])
 
+  // Bioluminescent ground glows - scattered across foreground
+  const groundGlows = useMemo(() => {
+    return Array.from({ length: 18 }, () => ({
+      position: [
+        (Math.random() - 0.5) * 12,
+        -1.49,
+        Math.random() * 3 - 1
+      ] as [number, number, number],
+      phase: Math.random() * Math.PI * 2,
+      size: Math.random() * 0.04 + 0.02
+    }))
+  }, [])
+
   return (
     <>
-      {/* Serengeti gradient sky - warmer horizon */}
+      {/* Serengeti gradient sky - larger for full coverage */}
       <mesh position={[0, 0, -10]}>
-        <planeGeometry args={[30, 15]} />
+        <planeGeometry args={[60, 30]} />
         <shaderMaterial
           vertexShader={`
             varying vec2 vUv;
@@ -357,32 +392,23 @@ function Scene() {
           fragmentShader={`
             varying vec2 vUv;
             void main() {
-              // Deep night sky at top
-              vec3 nightColor = vec3(0.04, 0.04, 0.08);
-              // Rich purple-blue transition
-              vec3 duskColor = vec3(0.12, 0.08, 0.15);
-              // Warm amber band
+              vec3 nightColor = vec3(0.02, 0.02, 0.05);
+              vec3 duskColor = vec3(0.1, 0.06, 0.12);
               vec3 amberColor = vec3(0.5, 0.25, 0.1);
-              // Hot orange at horizon edge
               vec3 horizonColor = vec3(0.9, 0.45, 0.1);
-              // Deep orange-red at very bottom
               vec3 glowColor = vec3(0.95, 0.35, 0.05);
 
               float t = vUv.y;
               vec3 color;
 
-              if (t < 0.08) {
-                // Hot glow right at horizon
-                color = mix(glowColor, horizonColor, t / 0.08);
-              } else if (t < 0.18) {
-                // Orange to amber
-                color = mix(horizonColor, amberColor, (t - 0.08) / 0.1);
-              } else if (t < 0.35) {
-                // Amber to dusk purple
-                color = mix(amberColor, duskColor, (t - 0.18) / 0.17);
+              if (t < 0.06) {
+                color = mix(glowColor, horizonColor, t / 0.06);
+              } else if (t < 0.14) {
+                color = mix(horizonColor, amberColor, (t - 0.06) / 0.08);
+              } else if (t < 0.28) {
+                color = mix(amberColor, duskColor, (t - 0.14) / 0.14);
               } else {
-                // Dusk to night
-                color = mix(duskColor, nightColor, (t - 0.35) / 0.65);
+                color = mix(duskColor, nightColor, (t - 0.28) / 0.72);
               }
 
               gl_FragColor = vec4(color, 1.0);
@@ -396,16 +422,23 @@ function Scene() {
       <HorizonGlow />
       <AcaciaTree />
 
-      {/* Lightning bolts at different positions */}
+      {/* Bioluminescent ground glows */}
+      {groundGlows.map((glow, i) => (
+        <GroundGlow
+          key={`glow-${i}`}
+          position={glow.position}
+          phase={glow.phase}
+          size={glow.size}
+        />
+      ))}
+
       <Lightning position={[-4, -0.5, -8]} delay={0} scale={0.7} />
       <Lightning position={[5, -0.4, -8.5]} delay={2} scale={0.5} />
 
-      {/* Tennis ball shaped ash clusters */}
       {tennisBalls.map((ball, i) => (
         <TennisBallAsh key={`ball-${i}`} position={ball.position} speed={ball.speed} />
       ))}
 
-      {/* Scattered ash particles */}
       {ashParticles.map((ash, i) => (
         <AshParticle key={`ash-${i}`} position={ash.position} speed={ash.speed} />
       ))}
@@ -415,8 +448,12 @@ function Scene() {
 
 export default function SerengetiScene() {
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-      <Canvas camera={{ position: [0, 0, 5], fov: 60 }}>
+    <div style={{ position: 'absolute', inset: 0, zIndex: 0, background: '#0d0a08' }}>
+      <Canvas
+        camera={{ position: [0, 0, 5], fov: 60 }}
+        style={{ display: 'block' }}
+        gl={{ antialias: true }}
+      >
         <Scene />
       </Canvas>
     </div>
