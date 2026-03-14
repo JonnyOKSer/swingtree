@@ -359,7 +359,7 @@ export default function DrawSheet({
             <span className="legend-box tier-skip" />
             <span>SKIP</span>
           </div>
-          <div className="legend-item">
+          <div className="legend-item legend-tooltip" data-tooltip="Predicted winner will lose first set">
             <span className="divergence-icon">⚡</span>
             <span>Divergence</span>
           </div>

@@ -168,6 +168,40 @@
   color: #fbbf24;
 }
 
+/* Legend tooltip */
+.legend-tooltip {
+  position: relative;
+  cursor: help;
+}
+
+.legend-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #d0d0c0;
+  white-space: nowrap;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.legend-tooltip:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
 /* Bracket layout */
 .draw-bracket {
   display: flex;
