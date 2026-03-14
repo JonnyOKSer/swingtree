@@ -44,18 +44,25 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     }
 
     // Get canonical tournament name for deduplication
-    function getCanonicalKey(name: string): string {
+    // Include tour in key so ATP and WTA draws show separately
+    function getCanonicalKey(name: string, tour: string = 'ATP'): string {
       const normalized = normalizeName(name).toLowerCase()
+      let base = normalized
       // Map common variations to canonical names
-      if (normalized.includes('indian wells')) return 'indian-wells'
-      if (normalized.includes('miami')) return 'miami'
-      if (normalized.includes('monte carlo') || normalized.includes('monte-carlo')) return 'monte-carlo'
-      if (normalized.includes('roland garros') || normalized.includes('french')) return 'roland-garros'
-      return normalized.replace(/[^a-z0-9]/g, '-')
+      if (normalized.includes('indian wells')) base = 'indian-wells'
+      else if (normalized.includes('miami')) base = 'miami'
+      else if (normalized.includes('monte carlo') || normalized.includes('monte-carlo')) base = 'monte-carlo'
+      else if (normalized.includes('roland garros') || normalized.includes('french')) base = 'roland-garros'
+      else base = normalized.replace(/[^a-z0-9]/g, '-')
+
+      // For combined events, keep separate entries for ATP and WTA
+      // Grand Slams and shared 1000s have both tours
+      return `${base}-${tour.toLowerCase()}`
     }
 
     // Get tournaments with recent predictions (active tournaments)
     // A tournament is "active" if it has predictions in the last 14 days
+    // Include all tiers (including SKIP) so WTA shows
     const recentPredictionsResult = await pool.query(`
       SELECT
         tournament,
@@ -65,7 +72,6 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         MAX(prediction_date) as last_pred_date
       FROM prediction_log
       WHERE prediction_date >= CURRENT_DATE - INTERVAL '14 days'
-        AND confidence_tier != 'SKIP'
       GROUP BY tournament, COALESCE(tour, 'ATP')
     `)
 
@@ -92,14 +98,20 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     for (const row of recentPredictionsResult.rows) {
       const name = row.tournament
-      const canonicalKey = getCanonicalKey(name)
+      const tour = row.tour || 'ATP'
+      const canonicalKey = getCanonicalKey(name, tour)
       const displayName = normalizeName(name)
       const metadata = TOURNAMENT_METADATA[name] || TOURNAMENT_METADATA[displayName]
-      const tour = row.tour || 'ATP'
       const completed = parseInt(row.completed_count) || 0
       const pending = parseInt(row.pred_count) - completed
 
-      // Only add if not already present (deduplication by canonical key)
+      // Determine category based on tour
+      let category = metadata?.category || tour
+      if (tour === 'WTA' && category.startsWith('ATP')) {
+        category = category.replace('ATP', 'WTA')
+      }
+
+      // Only add if not already present (deduplication by canonical key + tour)
       if (!tournamentMap.has(canonicalKey)) {
         tournamentMap.set(canonicalKey, {
           id: canonicalKey,
@@ -108,8 +120,8 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           countryCode: metadata?.countryCode || 'UNK',
           city: metadata?.city || displayName,
           surface: 'Hard',
-          category: metadata?.category || tour,
-          tour: metadata?.tour || tour,
+          category,
+          tour,  // Use actual tour from prediction_log, not metadata
           status: 'active',
           round: inferCurrentRound(completed, pending, 96),
           startDate: null,
@@ -143,7 +155,8 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
       for (const row of tournamentsTableResult.rows) {
         const name = row.name
-        const canonicalKey = getCanonicalKey(name)
+        const tour = row.tour || 'ATP'
+        const canonicalKey = getCanonicalKey(name, tour)
 
         // Only add if not already present (active tournaments take precedence)
         if (!tournamentMap.has(canonicalKey)) {
@@ -154,8 +167,8 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
             countryCode: row.country_code || 'UNK',
             city: row.city || name,
             surface: row.surface || 'Hard',
-            category: row.category || 'ATP',
-            tour: row.tour || 'ATP',
+            category: row.category || tour,
+            tour,
             status: 'upcoming',
             round: null,
             startDate: null,

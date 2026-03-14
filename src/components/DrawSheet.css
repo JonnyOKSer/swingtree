@@ -50,12 +50,46 @@
   flex-shrink: 0;
 }
 
+.draw-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
 .draw-title h2 {
-  margin: 0 0 4px 0;
+  margin: 0;
   font-size: 20px;
   font-weight: 500;
   color: #ffffff;
   letter-spacing: 1px;
+}
+
+.draw-tour-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.draw-tour-badge.tour-atp {
+  background: rgba(59, 130, 196, 0.2);
+  color: #5ba4d4;
+  border: 1px solid rgba(59, 130, 196, 0.3);
+}
+
+.draw-tour-badge.tour-wta {
+  background: rgba(196, 59, 130, 0.2);
+  color: #d45b9a;
+  border: 1px solid rgba(196, 59, 130, 0.3);
+}
+
+.draw-tour-badge.tour-atp-wta {
+  background: rgba(196, 151, 59, 0.2);
+  color: var(--serengeti-gold, #c4973b);
+  border: 1px solid rgba(196, 151, 59, 0.3);
 }
 
 .draw-meta {
@@ -111,17 +145,12 @@
 }
 
 .legend-box.tier-confident {
-  background: #5a5a4a;
+  background: #9a9a8a;
 }
 
 .legend-box.tier-pick {
   background: transparent;
-  border: 1px solid #5a5a4a;
-}
-
-.legend-box.tier-lean {
-  background: transparent;
-  border: 1px dashed #4a4a4a;
+  border: 1px dotted #6a6a6a;
 }
 
 .legend-box.tier-skip {
@@ -293,17 +322,13 @@
 }
 
 .match-card.tier-confident {
-  border-left: 3px solid #6a6a5a;
-  background: linear-gradient(90deg, rgba(106, 106, 90, 0.08) 0%, #222222 40%);
+  border-left: 3px solid #9a9a8a;
+  background: linear-gradient(90deg, rgba(154, 154, 138, 0.08) 0%, #222222 40%);
 }
 
 .match-card.tier-pick {
-  border-left: 3px solid #4a4a4a;
-}
-
-.match-card.tier-lean {
-  border-left: 3px dashed #3a3a3a;
-  opacity: 0.85;
+  border-left: 3px dotted #5a5a5a;
+  opacity: 0.9;
 }
 
 .match-card.tier-skip {
@@ -334,18 +359,13 @@
 }
 
 .tier-badge.tier-confident {
-  color: #a0a090;
-  background: rgba(160, 160, 144, 0.1);
+  color: #c0c0b0;
+  background: rgba(192, 192, 176, 0.12);
 }
 
 .tier-badge.tier-pick {
   color: #888888;
   background: rgba(136, 136, 136, 0.1);
-}
-
-.tier-badge.tier-lean {
-  color: #666666;
-  background: rgba(102, 102, 102, 0.1);
 }
 
 .tier-badge.tier-skip {
@@ -371,9 +391,35 @@
 }
 
 .divergence-flag {
+  position: relative;
   font-size: 11px;
   color: #fbbf24;
   cursor: help;
+}
+
+.divergence-flag::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  font-size: 10px;
+  color: #d0d0c0;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.divergence-flag:hover::after {
+  opacity: 1;
+  visibility: visible;
 }
 
 /* Player row */

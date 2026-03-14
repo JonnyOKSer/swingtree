@@ -45,6 +45,7 @@ export default function Predict() {
           city={selectedTournament.city}
           round={selectedTournament.round}
           status={selectedTournament.status}
+          tour={selectedTournament.tour}
           onClose={closeDraw}
         />
       )}

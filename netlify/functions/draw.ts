@@ -46,6 +46,7 @@ interface TournamentDraw {
     country: string
     current_round: string
     draw_size: number
+    tour: string
   }
   rounds: Round[]
 }
@@ -119,7 +120,21 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
   try {
     const pathParts = event.path.split('/')
-    const tournamentSlug = pathParts[pathParts.length - 1]
+    let tournamentSlug = pathParts[pathParts.length - 1]
+
+    // Extract tour from slug if present (e.g., "indian-wells-wta" -> tour=WTA)
+    // Or from query parameter
+    const queryParams = event.queryStringParameters || {}
+    let requestedTour = queryParams.tour?.toUpperCase() || null
+
+    // Check if slug ends with -atp or -wta
+    if (tournamentSlug.endsWith('-atp')) {
+      requestedTour = requestedTour || 'ATP'
+      tournamentSlug = tournamentSlug.replace(/-atp$/, '')
+    } else if (tournamentSlug.endsWith('-wta')) {
+      requestedTour = requestedTour || 'WTA'
+      tournamentSlug = tournamentSlug.replace(/-wta$/, '')
+    }
 
     if (!tournamentSlug || tournamentSlug === 'draw') {
       return {
@@ -162,7 +177,11 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // Using prediction_log only - predictions include actual_winner for completed matches
     // Note: The 'round' field in prediction_log is unreliable, so we infer round from prediction_date
 
+    // Determine tour to filter by (from request, tournament info, or default to ATP)
+    const tour = requestedTour || tournamentInfo?.tour || 'ATP'
+
     // Step 3: Get ASHE predictions with date for round inference
+    // Filter by tour to separate ATP and WTA draws
     const predictionsResult = await pool.query(`
       SELECT
         player_a as player1_name,
@@ -177,12 +196,14 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         actual_winner,
         correct,
         first_set_score_correct,
-        prediction_date
+        prediction_date,
+        COALESCE(tour, 'ATP') as tour
       FROM prediction_log
       WHERE LOWER(tournament) LIKE $1
         AND prediction_date >= CURRENT_DATE - INTERVAL '14 days'
+        AND COALESCE(tour, 'ATP') = $2
       ORDER BY prediction_date ASC, id ASC
-    `, [`%${searchPattern.toLowerCase()}%`])
+    `, [`%${searchPattern.toLowerCase()}%`, tour])
 
     // Determine draw size from tournament info
     const drawSize = getDrawSize(tourneyLevel, tournamentInfo?.draw_size)
@@ -388,17 +409,24 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       })
     }
 
+    // Determine category based on tour
+    let category = tournamentInfo?.category || tour
+    if (tour === 'WTA' && category.startsWith('ATP')) {
+      category = category.replace('ATP', 'WTA')
+    }
+
     const draw: TournamentDraw = {
       tournament: {
         id: tournamentInfo?.tournament_id,
         slug: tournamentInfo?.slug || tournamentSlug,
         name: tournamentInfo?.name || searchPattern,
-        category: tournamentInfo?.category || 'ATP',
+        category,
         surface: tournamentInfo?.surface || 'Hard',
         city: tournamentInfo?.city || '',
         country: tournamentInfo?.country || '',
         current_round: config.display[currentRound] || currentRound,
-        draw_size: drawSize
+        draw_size: drawSize,
+        tour
       },
       rounds
     }

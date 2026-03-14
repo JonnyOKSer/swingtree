@@ -206,3 +206,51 @@
   border: 2px solid #d4a84a;
   box-shadow: 0 0 10px rgba(196, 151, 59, 0.6);
 }
+
+/* Tour badges */
+.tournament-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tour-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.tour-badge.tour-atp {
+  background: rgba(59, 130, 196, 0.2);
+  color: #5ba4d4;
+  border: 1px solid rgba(59, 130, 196, 0.3);
+}
+
+.tour-badge.tour-wta {
+  background: rgba(196, 59, 130, 0.2);
+  color: #d45b9a;
+  border: 1px solid rgba(196, 59, 130, 0.3);
+}
+
+.tour-badge.tour-atp-wta {
+  background: rgba(196, 151, 59, 0.2);
+  color: var(--serengeti-gold);
+  border: 1px solid rgba(196, 151, 59, 0.3);
+}
+
+/* Tour-specific item highlighting */
+.tournament-item.tour-wta .live-indicator {
+  background: #d45b9a;
+}
+
+.tournament-item.tour-wta.active .tournament-name {
+  color: #d45b9a;
+}
+
+.tournament-item.tour-wta .round {
+  color: #d45b9a;
+}

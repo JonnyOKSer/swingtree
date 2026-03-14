@@ -215,11 +215,16 @@ export default function WorldMap({ onTournamentSelect }: WorldMapProps) {
             {countryTournaments.map((tournament) => (
               <div
                 key={tournament.id}
-                className={`tournament-item ${tournament.status}`}
+                className={`tournament-item ${tournament.status} tour-${tournament.tour.toLowerCase().replace('/', '-')}`}
                 onClick={() => onTournamentSelect(tournament)}
               >
                 <div className="tournament-info">
-                  <span className="tournament-name">{tournament.name}</span>
+                  <div className="tournament-name-row">
+                    <span className={`tour-badge tour-${tournament.tour.toLowerCase().replace('/', '-')}`}>
+                      {tournament.tour === 'ATP/WTA' ? 'ATP+WTA' : tournament.tour}
+                    </span>
+                    <span className="tournament-name">{tournament.name}</span>
+                  </div>
                   <span className="tournament-meta">
                     {tournament.category} • {tournament.surface}
                   </span>

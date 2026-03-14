@@ -47,6 +47,7 @@ interface DrawData {
     country: string
     current_round: string
     draw_size: number
+    tour?: string
   }
   rounds: Round[]
 }
@@ -58,6 +59,7 @@ interface DrawSheetProps {
   city: string
   round: string | null
   status: 'active' | 'upcoming'
+  tour: string
   onClose: () => void
 }
 
@@ -86,10 +88,15 @@ function MatchCard({ match }: { match: MatchSlot }) {
       case 'STRONG': return 'tier-strong'
       case 'CONFIDENT': return 'tier-confident'
       case 'PICK': return 'tier-pick'
-      case 'LEAN': return 'tier-lean'
+      case 'LEAN': return 'tier-pick'  // Consolidated into PICK
       case 'SKIP': return 'tier-skip'
       default: return ''
     }
+  }
+
+  const getTierDisplay = (tier?: string) => {
+    // Display LEAN as PICK since they're consolidated
+    return tier === 'LEAN' ? 'PICK' : tier
   }
 
   const formatConfidence = (conf: number) => Math.round(conf * 100)
@@ -147,7 +154,7 @@ function MatchCard({ match }: { match: MatchSlot }) {
             </span>
           )}
           {match.first_set?.divergence && (
-            <span className="divergence-flag" title="First set divergence">⚡</span>
+            <span className="divergence-flag" data-tooltip="First set pick differs from match winner">⚡</span>
           )}
         </div>
         <div className={`player-row ${match.winner === match.player1 ? 'winner' : ''}`}>
@@ -190,9 +197,9 @@ function MatchCard({ match }: { match: MatchSlot }) {
         onClick={() => setExpanded(!expanded)}
       >
         <div className="match-header">
-          <span className={`tier-badge ${getTierClass(pred.tier)}`}>{pred.tier}</span>
+          <span className={`tier-badge ${getTierClass(pred.tier)}`}>{getTierDisplay(pred.tier)}</span>
           {match.first_set?.divergence && (
-            <span className="divergence-flag" title="First set winner differs from match winner">⚡</span>
+            <span className="divergence-flag" data-tooltip="First set pick differs from match winner">⚡</span>
           )}
         </div>
         <div className={`player-row ${pred.predicted_winner === match.player1 ? 'predicted-winner' : ''}`}>
@@ -254,6 +261,7 @@ export default function DrawSheet({
   category,
   surface,
   city,
+  tour,
   onClose
 }: DrawSheetProps) {
   const [drawData, setDrawData] = useState<DrawData | null>(null)
@@ -264,7 +272,10 @@ export default function DrawSheet({
   useEffect(() => {
     const fetchDraw = async () => {
       try {
-        const slug = tournamentName.toLowerCase().replace(/[^a-z0-9]/g, '-')
+        // Include tour in slug for proper filtering (e.g., "indian-wells-wta")
+        const baseSlug = tournamentName.toLowerCase().replace(/[^a-z0-9]/g, '-')
+        const tourSuffix = tour && tour !== 'ATP/WTA' ? `-${tour.toLowerCase()}` : ''
+        const slug = `${baseSlug}${tourSuffix}`
         const response = await fetch(`/api/draw/${slug}`)
         if (response.ok) {
           const data = await response.json()
@@ -284,7 +295,7 @@ export default function DrawSheet({
       }
     }
     fetchDraw()
-  }, [tournamentName])
+  }, [tournamentName, tour])
 
   // Scroll to current round on load
   useEffect(() => {
@@ -305,15 +316,24 @@ export default function DrawSheet({
     surface,
     city,
     current_round: '',
-    draw_size: 32
+    draw_size: 32,
+    tour
   }
+
+  // Get tour badge class
+  const tourClass = (tournamentInfo.tour || tour || 'ATP').toLowerCase().replace('/', '-')
 
   return (
     <div className="draw-overlay" onClick={onClose}>
       <div className="draw-sheet" onClick={e => e.stopPropagation()}>
         <div className="draw-header">
           <div className="draw-title">
-            <h2>{tournamentInfo.name}</h2>
+            <div className="draw-title-row">
+              <span className={`draw-tour-badge tour-${tourClass}`}>
+                {tournamentInfo.tour || tour}
+              </span>
+              <h2>{tournamentInfo.name}</h2>
+            </div>
             <span className="draw-meta">
               {tournamentInfo.category} • {tournamentInfo.surface} • {tournamentInfo.city}
               {tournamentInfo.current_round && ` • ${tournamentInfo.current_round}`}
@@ -334,10 +354,6 @@ export default function DrawSheet({
           <div className="legend-item">
             <span className="legend-box tier-pick" />
             <span>PICK</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-box tier-lean" />
-            <span>LEAN</span>
           </div>
           <div className="legend-item">
             <span className="legend-box tier-skip" />
