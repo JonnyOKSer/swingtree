@@ -148,7 +148,8 @@
 .round-column {
   display: flex;
   flex-direction: column;
-  min-width: 200px;
+  width: 210px;
+  min-width: 210px;
   flex-shrink: 0;
 }
 
@@ -197,7 +198,7 @@
   background: #3a3a3a;
 }
 
-/* Match card base */
+/* Match card base - FIXED SIZE for clean grid */
 .match-card {
   background: #222222;
   border: 1px solid #333333;
@@ -205,10 +206,16 @@
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
-  min-height: 85px;
+  /* Fixed dimensions - all cards same size */
+  width: 190px;
+  height: 100px;
+  min-height: 100px;
+  max-height: 100px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  overflow: hidden;
 }
 
 .match-card:hover {
@@ -433,6 +440,32 @@
   color: #888888;
 }
 
+/* Glowing acacia tree - first set correct score indicator */
+.fs-correct-tree {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  animation: treeGlow 2s ease-in-out infinite;
+}
+
+.fs-correct-tree svg {
+  width: 16px;
+  height: 16px;
+  filter: drop-shadow(0 0 3px rgba(196, 151, 59, 0.6));
+}
+
+@keyframes treeGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px rgba(196, 151, 59, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 6px rgba(196, 151, 59, 0.8));
+  }
+}
+
 /* Match details (expanded) */
 .match-details {
   margin-top: 6px;
@@ -513,10 +546,15 @@
   }
 
   .round-column {
-    min-width: 160px;
+    width: 170px;
+    min-width: 170px;
   }
 
   .match-card {
+    width: 160px;
+    height: 95px;
+    min-height: 95px;
+    max-height: 95px;
     padding: 6px 8px;
   }
 

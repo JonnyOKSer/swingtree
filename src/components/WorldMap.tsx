@@ -232,9 +232,11 @@ export default function WorldMap({ onTournamentSelect }: WorldMapProps) {
                     </>
                   ) : (
                     <span className="days-until">
-                      {daysUntil(tournament.startDate) <= 0
-                        ? 'Starting today'
-                        : `In ${daysUntil(tournament.startDate)} days`}
+                      {tournament.startDate === null
+                        ? 'Upcoming'
+                        : daysUntil(tournament.startDate) <= 0
+                          ? 'Starting today'
+                          : `In ${daysUntil(tournament.startDate)} days`}
                     </span>
                   )}
                 </div>

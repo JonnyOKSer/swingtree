@@ -25,6 +25,7 @@ interface MatchSlot {
     tiebreak_pct: number
     over_under: string
     divergence: boolean
+    score_correct?: boolean  // True when predicted score matches actual
   }
 }
 
@@ -58,6 +59,23 @@ interface DrawSheetProps {
   round: string | null
   status: 'active' | 'upcoming'
   onClose: () => void
+}
+
+// Glowing acacia tree icon - shows when first set score is exactly correct
+function GlowingTree() {
+  return (
+    <span className="fs-correct-tree" title="First set score correct!">
+      <svg viewBox="0 0 32 32" width="16" height="16">
+        <g fill="#c4973b">
+          <rect x="15" y="18" width="2" height="10"/>
+          <ellipse cx="16" cy="14" rx="10" ry="4"/>
+          <ellipse cx="16" cy="15" rx="9" ry="3"/>
+          <path d="M6 14 Q8 10 16 9 Q24 10 26 14 Q24 13 16 12 Q8 13 6 14"/>
+          <ellipse cx="16" cy="11" rx="7" ry="3"/>
+        </g>
+      </svg>
+    </span>
+  )
 }
 
 function MatchCard({ match }: { match: MatchSlot }) {
@@ -151,9 +169,11 @@ function MatchCard({ match }: { match: MatchSlot }) {
 
         {match.first_set && (
           <div className="first-set-line">
-            <span>1st: {match.first_set.predicted_winner?.split(' ').pop()} {match.first_set.predicted_score}</span>
+            <span>
+              1st: {match.first_set.predicted_winner?.split(' ').pop()} {match.first_set.predicted_score}
+              {match.first_set.score_correct && <GlowingTree />}
+            </span>
             <span>TB:{match.first_set.tiebreak_pct}%</span>
-            <span>{match.first_set.over_under?.replace('9.5', '').trim()}</span>
           </div>
         )}
       </div>
