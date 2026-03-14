@@ -124,6 +124,11 @@
   border: 1px dashed #4a4a4a;
 }
 
+.legend-box.tier-skip {
+  background: transparent;
+  border: 1px dotted #3a3a3a;
+}
+
 .legend-box.tier-void {
   background: transparent;
   border: 1px dashed #4a3a3a;
@@ -301,6 +306,11 @@
   opacity: 0.85;
 }
 
+.match-card.tier-skip {
+  border-left: 2px dotted #333333;
+  opacity: 0.7;
+}
+
 /* Match header */
 .match-header {
   display: flex;
@@ -336,6 +346,11 @@
 .tier-badge.tier-lean {
   color: #666666;
   background: rgba(102, 102, 102, 0.1);
+}
+
+.tier-badge.tier-skip {
+  color: #555555;
+  background: rgba(85, 85, 85, 0.08);
 }
 
 .result-badge {

@@ -87,6 +87,7 @@ function MatchCard({ match }: { match: MatchSlot }) {
       case 'CONFIDENT': return 'tier-confident'
       case 'PICK': return 'tier-pick'
       case 'LEAN': return 'tier-lean'
+      case 'SKIP': return 'tier-skip'
       default: return ''
     }
   }
@@ -337,6 +338,10 @@ export default function DrawSheet({
           <div className="legend-item">
             <span className="legend-box tier-lean" />
             <span>LEAN</span>
+          </div>
+          <div className="legend-item">
+            <span className="legend-box tier-skip" />
+            <span>SKIP</span>
           </div>
           <div className="legend-item">
             <span className="divergence-icon">⚡</span>

@@ -25,6 +25,7 @@ interface MatchSlot {
     tiebreak_pct: number
     over_under: string
     divergence: boolean
+    score_correct?: boolean
   }
 }
 
@@ -180,7 +181,6 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       FROM prediction_log
       WHERE LOWER(tournament) LIKE $1
         AND prediction_date >= CURRENT_DATE - INTERVAL '14 days'
-        AND confidence_tier != 'SKIP'
       ORDER BY prediction_date ASC, id ASC
     `, [`%${searchPattern.toLowerCase()}%`])
 
