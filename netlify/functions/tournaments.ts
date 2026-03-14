@@ -43,13 +43,23 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         .trim()
     }
 
+    // Map tournament names to canonical display names
+    function getDisplayName(name: string): string {
+      const normalized = normalizeName(name).toLowerCase()
+      if (normalized.includes('indian wells') || normalized.includes('bnp paribas')) return 'Indian Wells'
+      if (normalized.includes('miami')) return 'Miami Open'
+      if (normalized.includes('monte carlo') || normalized.includes('monte-carlo')) return 'Monte-Carlo Masters'
+      if (normalized.includes('roland garros') || normalized.includes('french')) return 'Roland Garros'
+      return normalizeName(name)
+    }
+
     // Get canonical tournament name for deduplication
     // Include tour in key so ATP and WTA draws show separately
     function getCanonicalKey(name: string, tour: string = 'ATP'): string {
       const normalized = normalizeName(name).toLowerCase()
       let base = normalized
       // Map common variations to canonical names
-      if (normalized.includes('indian wells')) base = 'indian-wells'
+      if (normalized.includes('indian wells') || normalized.includes('bnp paribas')) base = 'indian-wells'
       else if (normalized.includes('miami')) base = 'miami'
       else if (normalized.includes('monte carlo') || normalized.includes('monte-carlo')) base = 'monte-carlo'
       else if (normalized.includes('roland garros') || normalized.includes('french')) base = 'roland-garros'
@@ -100,7 +110,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       const name = row.tournament
       const tour = row.tour || 'ATP'
       const canonicalKey = getCanonicalKey(name, tour)
-      const displayName = normalizeName(name)
+      const displayName = getDisplayName(name)
       const metadata = TOURNAMENT_METADATA[name] || TOURNAMENT_METADATA[displayName]
       const completed = parseInt(row.completed_count) || 0
       const pending = parseInt(row.pred_count) - completed
@@ -156,6 +166,18 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       for (const row of tournamentsTableResult.rows) {
         const name = row.name
         const tour = row.tour || 'ATP'
+
+        // For combined events (ATP/WTA), check if EITHER tour is already active
+        // If so, skip adding the "upcoming" entry
+        if (tour === 'ATP/WTA') {
+          const atpKey = getCanonicalKey(name, 'ATP')
+          const wtaKey = getCanonicalKey(name, 'WTA')
+          // Skip if either ATP or WTA draw is already active
+          if (tournamentMap.has(atpKey) || tournamentMap.has(wtaKey)) {
+            continue
+          }
+        }
+
         const canonicalKey = getCanonicalKey(name, tour)
 
         // Only add if not already present (active tournaments take precedence)
