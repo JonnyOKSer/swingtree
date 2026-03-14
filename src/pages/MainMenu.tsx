@@ -24,17 +24,14 @@ export default function MainMenu() {
       <nav className="menu-options">
         <Link to="/predict" className="menu-option">
           <span className="option-label">Predict</span>
-          <span className="option-desc">View live predictions</span>
         </Link>
 
         <Link to="/results" className="menu-option">
-          <span className="option-label">Results</span>
-          <span className="option-desc">Track record</span>
+          <span className="option-label">Proof</span>
         </Link>
 
         <button onClick={handleLogout} className="menu-option logout">
-          <span className="option-label">Out</span>
-          <span className="option-desc">Exit oracle</span>
+          <span className="option-label">Peace</span>
         </button>
       </nav>
     </div>
