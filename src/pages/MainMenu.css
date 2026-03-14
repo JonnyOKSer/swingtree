@@ -18,8 +18,9 @@
 }
 
 .menu-options {
-  display: flex;
-  gap: 48px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
 }
 
 .menu-option {
@@ -34,7 +35,7 @@
   text-decoration: none;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-width: 160px;
+  min-width: 140px;
   font-family: inherit;
 }
 

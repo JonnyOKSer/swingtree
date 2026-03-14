@@ -2,6 +2,46 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import './Results.css'
 
+// FAQ data
+const FAQ_ITEMS = [
+  {
+    question: "How does ASHE make predictions?",
+    answer: "ASHE uses a proprietary ELO-based model that analyzes historical match data, surface performance, head-to-head records, and recent form. The model processes 364,000+ professional tennis matches to identify statistical patterns that predict match outcomes."
+  },
+  {
+    question: "What do STRONG, CONFIDENT, PICK, and SKIP mean?",
+    answer: "These are confidence tiers. STRONG indicates the highest conviction picks with historically 85%+ accuracy. CONFIDENT shows solid edges. PICK represents standard predictions worth considering. SKIP means the model sees no clear edge and recommends passing on the match."
+  },
+  {
+    question: "How many matches is the model trained on?",
+    answer: "The model is trained on over 364,000 professional tennis matches spanning ATP and WTA tours from 2000 to present. This includes all Grand Slams, Masters 1000 events, and tour-level competitions."
+  },
+  {
+    question: "What is a first set score prediction?",
+    answer: "Beyond predicting the match winner, ASHE forecasts the exact first set score (e.g., 6-4, 7-5). This includes tiebreak probability and over/under 9.5 games analysis. The divergence indicator shows when the predicted first set winner differs from the predicted match winner."
+  },
+  {
+    question: "How often is ASHE updated?",
+    answer: "ASHE runs autonomously every day at 6 AM EST. It reconciles yesterday's predictions against actual results, updates player ratings with new match data, and generates fresh predictions for today's scheduled matches across both ATP and WTA tours."
+  }
+]
+
+function FAQItem({ question, answer }: { question: string; answer: string }) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <div className={`faq-item ${isOpen ? 'open' : ''}`}>
+      <button className="faq-question" onClick={() => setIsOpen(!isOpen)}>
+        <span>{question}</span>
+        <span className="faq-icon">{isOpen ? '−' : '+'}</span>
+      </button>
+      <div className="faq-answer">
+        <p>{answer}</p>
+      </div>
+    </div>
+  )
+}
+
 interface TourResults {
   match: { wins: number; total: number; percentage: number }
   firstSet: { wins: number; total: number; percentage: number }
@@ -113,6 +153,15 @@ export default function Results() {
       <p className="results-note">
         Season-to-date results. PICK tier and above.
       </p>
+
+      <section className="faq-section">
+        <h2 className="faq-title">FAQ</h2>
+        <div className="faq-list">
+          {FAQ_ITEMS.map((item, index) => (
+            <FAQItem key={index} question={item.question} answer={item.answer} />
+          ))}
+        </div>
+      </section>
 
       <footer className="results-footer">
         {isAuthenticated ? (

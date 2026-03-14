@@ -3,6 +3,7 @@ import GatedEntrance from './pages/GatedEntrance'
 import MainMenu from './pages/MainMenu'
 import Predict from './pages/Predict'
 import Results from './pages/Results'
+import Pedigree from './pages/Pedigree'
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/main" element={<MainMenu />} />
         <Route path="/predict" element={<Predict />} />
         <Route path="/results" element={<Results />} />
+        <Route path="/pedigree" element={<Pedigree />} />
       </Routes>
     </BrowserRouter>
   )

@@ -1,0 +1,134 @@
+.pedigree-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--charcoal);
+  padding: 48px;
+  overflow-y: auto;
+}
+
+.pedigree-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.pedigree-wordmark {
+  font-size: 36px;
+  font-weight: 400;
+  letter-spacing: 6px;
+  color: var(--flash-white);
+  margin: 0 0 8px 0;
+}
+
+.pedigree-subtitle {
+  font-size: 14px;
+  color: var(--ash-grey);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.pedigree-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  max-width: 700px;
+  width: 100%;
+}
+
+.pedigree-box {
+  background: var(--charcoal-light);
+  border: 1px solid var(--ash-grey);
+  padding: 32px;
+  text-align: center;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.pedigree-box:hover {
+  border-color: var(--serengeti-gold);
+  box-shadow: 0 0 20px var(--gold-dim);
+}
+
+.pedigree-label {
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: var(--ash-grey);
+  margin: 0 0 4px 0;
+  font-weight: 400;
+}
+
+.pedigree-sublabel {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--ash-grey);
+  opacity: 0.7;
+  margin: 0 0 16px 0;
+}
+
+.pedigree-percentage {
+  font-size: 48px;
+  font-weight: 600;
+  color: var(--serengeti-gold);
+  margin-bottom: 16px;
+}
+
+.pedigree-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--charcoal);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pedigree-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--serengeti-gold), var(--gold-glow));
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.pedigree-note {
+  margin-top: 32px;
+  font-size: 12px;
+  color: var(--ash-grey);
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.pedigree-footer {
+  margin-top: 48px;
+}
+
+.pedigree-footer .back-link {
+  font-size: 14px;
+  color: var(--ash-grey);
+  letter-spacing: 1px;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.pedigree-footer .back-link:hover {
+  color: var(--serengeti-gold);
+}
+
+@media (max-width: 600px) {
+  .pedigree-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .pedigree-box {
+    padding: 24px;
+  }
+
+  .pedigree-percentage {
+    font-size: 36px;
+  }
+
+  .pedigree-page {
+    padding: 24px;
+  }
+}

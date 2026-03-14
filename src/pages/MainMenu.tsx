@@ -30,6 +30,10 @@ export default function MainMenu() {
           <span className="option-label">Proof</span>
         </Link>
 
+        <Link to="/pedigree" className="menu-option">
+          <span className="option-label">Pedigree</span>
+        </Link>
+
         <button onClick={handleLogout} className="menu-option logout">
           <span className="option-label">Peace</span>
         </button>
