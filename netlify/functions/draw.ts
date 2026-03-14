@@ -175,21 +175,36 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     // Note: matches table has data quality issues (challenger contamination)
     // Using prediction_log only - predictions include actual_winner for completed matches
-    // Note: The 'round' field in prediction_log is unreliable, so we infer round from prediction_date
 
     // Determine tour to filter by (from request, tournament info, or default to ATP)
     const tour = requestedTour || tournamentInfo?.tour || 'ATP'
 
+    // Step 2: Get all aliases for this tournament (for searching predictions)
+    let searchPatterns = [searchPattern.toLowerCase()]
+    if (tournamentInfo?.tournament_id) {
+      try {
+        const aliasResult = await pool.query(`
+          SELECT alias_name FROM tournament_aliases
+          WHERE tournament_id = $1
+        `, [tournamentInfo.tournament_id])
+        for (const row of aliasResult.rows) {
+          searchPatterns.push(row.alias_name.toLowerCase())
+        }
+      } catch {
+        // aliases table doesn't exist
+      }
+    }
+
     // DEBUG logging
     console.log('Draw API Debug:', {
       tournamentSlug,
-      searchPattern,
-      tour,
-      likePattern: `%${searchPattern.toLowerCase()}%`
+      searchPatterns,
+      tour
     })
 
-    // Step 3: Get ASHE predictions - use the round field directly
+    // Step 3: Get ASHE predictions - search by any alias name
     // Filter by tour to separate ATP and WTA draws
+    const likeConditions = searchPatterns.map((_, i) => `LOWER(tournament) LIKE $${i + 1}`).join(' OR ')
     const predictionsResult = await pool.query(`
       SELECT
         player_a as player1_name,
@@ -208,11 +223,11 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         COALESCE(tour, 'ATP') as tour,
         round as prediction_round
       FROM prediction_log
-      WHERE LOWER(tournament) LIKE $1
+      WHERE (${likeConditions})
         AND prediction_date >= CURRENT_DATE - INTERVAL '14 days'
-        AND COALESCE(tour, 'ATP') = $2
+        AND COALESCE(tour, 'ATP') = $${searchPatterns.length + 1}
       ORDER BY prediction_date ASC, id ASC
-    `, [`%${searchPattern.toLowerCase()}%`, tour])
+    `, [...searchPatterns.map(p => `%${p}%`), tour])
 
     console.log('Predictions query returned:', predictionsResult.rows.length, 'rows')
 
