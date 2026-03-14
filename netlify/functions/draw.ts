@@ -180,7 +180,15 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // Determine tour to filter by (from request, tournament info, or default to ATP)
     const tour = requestedTour || tournamentInfo?.tour || 'ATP'
 
-    // Step 3: Get ASHE predictions with date for round inference
+    // DEBUG logging
+    console.log('Draw API Debug:', {
+      tournamentSlug,
+      searchPattern,
+      tour,
+      likePattern: `%${searchPattern.toLowerCase()}%`
+    })
+
+    // Step 3: Get ASHE predictions - use the round field directly
     // Filter by tour to separate ATP and WTA draws
     const predictionsResult = await pool.query(`
       SELECT
@@ -197,7 +205,8 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         correct,
         first_set_score_correct,
         prediction_date,
-        COALESCE(tour, 'ATP') as tour
+        COALESCE(tour, 'ATP') as tour,
+        round as prediction_round
       FROM prediction_log
       WHERE LOWER(tournament) LIKE $1
         AND prediction_date >= CURRENT_DATE - INTERVAL '14 days'
@@ -205,116 +214,55 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       ORDER BY prediction_date ASC, id ASC
     `, [`%${searchPattern.toLowerCase()}%`, tour])
 
+    console.log('Predictions query returned:', predictionsResult.rows.length, 'rows')
+
     // Determine draw size from tournament info
     const drawSize = getDrawSize(tourneyLevel, tournamentInfo?.draw_size)
     const config = ROUND_CONFIG[drawSize] || ROUND_CONFIG[32]
 
-    // Step 4: Group predictions by date and infer rounds
-    // Predictions from the same date belong to the same round
-    // Count per date determines which round (32 = R64, 16 = R32, 8 = R16, 4 = QF, 2 = SF, 1 = F)
-    const predictionsByDate: Record<string, any[]> = {}
-    for (const pred of predictionsResult.rows) {
-      const dateKey = pred.prediction_date?.toISOString?.()?.split('T')[0] || pred.prediction_date
-      if (!predictionsByDate[dateKey]) predictionsByDate[dateKey] = []
-      predictionsByDate[dateKey].push(pred)
-    }
-
-    // Sort dates chronologically and assign rounds based on count
-    const dates = Object.keys(predictionsByDate).sort()
+    // Step 4: Group predictions by round field (from prediction_log)
+    // Use the stored round value instead of inferring from date
     const predictionsByRound: Record<string, any[]> = {}
-    const playerRoundAssignments: Record<string, string> = {} // player -> round they're already assigned to
+    const seenMatches = new Set<string>()
 
-    // Map count to round name (approximate - may not be exact for all draw sizes)
-    function inferRound(count: number, drawSize: number): string {
-      if (drawSize >= 96) {
-        if (count >= 24) return 'R64'
-        if (count >= 12) return 'R32'
-        if (count >= 6) return 'R16'
-        if (count >= 3) return 'QF'
-        if (count >= 2) return 'SF'
-        return 'F'
-      } else if (drawSize >= 48) {
-        if (count >= 12) return 'R32'
-        if (count >= 6) return 'R16'
-        if (count >= 3) return 'QF'
-        if (count >= 2) return 'SF'
-        return 'F'
-      } else {
-        if (count >= 6) return 'R16'
-        if (count >= 3) return 'QF'
-        if (count >= 2) return 'SF'
-        return 'F'
+    for (const pred of predictionsResult.rows) {
+      // Use the round from prediction_log, default to 'R32' if missing
+      const round = pred.prediction_round || 'R32'
+
+      // Skip duplicates (same players, same round)
+      const matchKey = [pred.player1_name, pred.player2_name].sort().join('|') + '|' + round
+      if (seenMatches.has(matchKey)) continue
+      seenMatches.add(matchKey)
+
+      if (!predictionsByRound[round]) {
+        predictionsByRound[round] = []
       }
+      predictionsByRound[round].push(pred)
     }
 
-    // Process dates in order, assigning to rounds
-    for (const dateKey of dates) {
-      const preds = predictionsByDate[dateKey]
-      const inferredRound = inferRound(preds.length, drawSize)
-
-      if (!predictionsByRound[inferredRound]) {
-        predictionsByRound[inferredRound] = []
-      }
-
-      // Add predictions, ensuring each player only appears once per round
-      for (const pred of preds) {
-        const p1 = pred.player1_name
-        const p2 = pred.player2_name
-        const existingRound1 = playerRoundAssignments[p1]
-        const existingRound2 = playerRoundAssignments[p2]
-
-        // Skip if either player is already assigned to this round
-        if (existingRound1 === inferredRound || existingRound2 === inferredRound) {
-          continue
-        }
-
-        // Skip if match pair already exists (exact duplicate)
-        const matchKey = [p1, p2].sort().join('|')
-        const isDuplicate = predictionsByRound[inferredRound].some((existing: any) => {
-          const existingKey = [existing.player1_name, existing.player2_name].sort().join('|')
-          return existingKey === matchKey
-        })
-        if (isDuplicate) continue
-
-        playerRoundAssignments[p1] = inferredRound
-        playerRoundAssignments[p2] = inferredRound
-        predictionsByRound[inferredRound].push(pred)
-      }
-    }
+    console.log('Predictions by round:', Object.keys(predictionsByRound).map(r => `${r}:${predictionsByRound[r].length}`).join(', '))
 
     // Step 5: Build complete bracket structure
     const rounds: Round[] = []
 
-    // Find current round based on prediction state
-    // If a round has pending predictions, that's the current round
-    // If all predictions are complete, current round is the NEXT round after the last with predictions
+    // Find current round: the latest round that has pending predictions
+    // Scan rounds from latest (F) to earliest (R128)
     let currentRound = config.rounds[0] // Default to first round
-    let foundPending = false
-    let lastCompletedRound = ''
 
-    for (const roundName of config.rounds) {
+    // Check from latest round backwards
+    for (let i = config.rounds.length - 1; i >= 0; i--) {
+      const roundName = config.rounds[i]
       const predictions = predictionsByRound[roundName] || []
       if (predictions.length > 0) {
-        const hasPending = predictions.some(p => !p.actual_winner)
+        const hasPending = predictions.some(p => !p.actual_winner || p.actual_winner?.startsWith('VOID'))
         if (hasPending) {
           currentRound = roundName
-          foundPending = true
           break
-        } else {
-          lastCompletedRound = roundName
         }
       }
     }
 
-    // If no pending predictions found, current round is AFTER the last completed round
-    if (!foundPending && lastCompletedRound) {
-      const lastIndex = config.rounds.indexOf(lastCompletedRound)
-      if (lastIndex >= 0 && lastIndex < config.rounds.length - 1) {
-        currentRound = config.rounds[lastIndex + 1]
-      } else {
-        currentRound = 'F' // Tournament complete
-      }
-    }
+    console.log('Current round:', currentRound)
 
     for (const roundName of config.rounds) {
       const matchCount = config.matchCounts[roundName]
