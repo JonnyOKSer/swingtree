@@ -154,8 +154,8 @@
 }
 
 .legend-box.tier-skip {
-  background: transparent;
-  border: 1px dotted #3a3a3a;
+  background: #2a2628;
+  border: 1px dotted #555555;
 }
 
 .legend-box.tier-void {
@@ -224,7 +224,7 @@
 .round-header {
   font-size: 11px;
   font-weight: 500;
-  color: #8a8a7a;
+  color: #C8C0B0;
   text-transform: uppercase;
   letter-spacing: 1px;
   padding: 6px 8px;
@@ -293,15 +293,14 @@
 
 /* TBD match */
 .match-card.match-tbd {
-  border-style: dashed;
-  border-color: #2a2a2a;
-  opacity: 0.5;
+  border: 1px solid #333333;
+  opacity: 0.6;
   cursor: default;
 }
 
 .match-card.match-tbd:hover {
   background: #222222;
-  border-color: #2a2a2a;
+  border-color: #333333;
 }
 
 /* Voided match (withdrawal, walkover) */
@@ -328,7 +327,7 @@
 
 .vs-divider {
   font-size: 10px;
-  color: #555555;
+  color: #888888;
   text-align: center;
   padding: 2px 0;
 }
@@ -366,8 +365,9 @@
 }
 
 .match-card.tier-skip {
-  border-left: 2px dotted #333333;
-  opacity: 0.7;
+  border-left: 2px dotted #444444;
+  background: #2a2628;
+  opacity: 0.9;
 }
 
 /* Match header */
@@ -403,8 +403,8 @@
 }
 
 .tier-badge.tier-skip {
-  color: #555555;
-  background: rgba(85, 85, 85, 0.08);
+  color: #ffffff;
+  background: rgba(100, 100, 100, 0.25);
 }
 
 .result-badge {
@@ -463,20 +463,21 @@
   gap: 6px;
   padding: 2px 0;
   font-size: 12px;
-  color: #999999;
+  color: #FFFFFF;
 }
 
 .player-row.winner {
-  color: #ffffff;
-  font-weight: 500;
+  color: #FFFFFF;
+  font-weight: 600;
 }
 
 .player-row.predicted-winner {
-  color: #ffffff;
+  color: #FFFFFF;
+  font-weight: 500;
 }
 
 .player-row .muted {
-  color: #555555;
+  color: #888888;
 }
 
 .player-seed {
@@ -524,7 +525,7 @@
   display: flex;
   gap: 8px;
   font-size: 9px;
-  color: #777777;
+  color: #C8C0B0;
   margin-top: 6px;
   padding-top: 4px;
   border-top: 1px solid #2a2a2a;
@@ -532,7 +533,7 @@
 }
 
 .first-set-line span:first-child {
-  color: #888888;
+  color: #C8C0B0;
 }
 
 /* Glowing acacia tree - first set correct score indicator */
