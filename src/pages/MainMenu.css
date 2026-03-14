@@ -21,6 +21,9 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 24px;
+  max-width: 90vw;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
 .menu-option {
@@ -58,12 +61,20 @@
 
 @media (max-width: 768px) {
   .menu-options {
-    flex-direction: column;
-    gap: 24px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    width: 100%;
+    max-width: 340px;
+    padding: 0 24px;
   }
 
   .menu-option {
-    width: 200px;
-    padding: 24px 32px;
+    min-width: unset;
+    padding: 24px 16px;
+  }
+
+  .option-label {
+    font-size: 16px;
+    letter-spacing: 2px;
   }
 }
