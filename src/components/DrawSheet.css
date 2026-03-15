@@ -543,7 +543,7 @@
   justify-content: center;
   width: 16px;
   height: 16px;
-  margin-left: 4px;
+  margin-left: auto;  /* Push to far right as celebration badge */
   animation: treeGlow 2s ease-in-out infinite;
 }
 

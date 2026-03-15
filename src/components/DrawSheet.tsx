@@ -186,9 +186,9 @@ function MatchCard({ match }: { match: MatchSlot }) {
           <div className="first-set-line">
             <span>
               1st: {match.first_set.predicted_winner?.split(' ').pop()} {canViewFirstSetScore ? match.first_set.predicted_score : ''}
-              {canViewFirstSetScore && match.first_set.score_correct && <GlowingTree />}
             </span>
             {canViewOverUnder && <span>TB:{match.first_set.tiebreak_pct}%</span>}
+            {canViewFirstSetScore && match.first_set.score_correct && <GlowingTree />}
           </div>
         )}
       </div>
