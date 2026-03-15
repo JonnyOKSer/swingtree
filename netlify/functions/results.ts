@@ -29,26 +29,31 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     const pool = getPool()
 
     // Get overall results by tour
+    // Filter by actual_winner (not correct) to include all reconciled matches
+    // This ensures matches show up even if 'correct' field wasn't explicitly set
     const overallResult = await pool.query(`
       SELECT
         COALESCE(tour, 'ATP') as tour,
         COUNT(*) as total,
-        SUM(CASE WHEN correct = true THEN 1 ELSE 0 END) as match_wins,
+        SUM(CASE WHEN correct = true OR (correct IS NULL AND actual_winner = predicted_winner) THEN 1 ELSE 0 END) as match_wins,
         SUM(CASE WHEN first_set_correct = true THEN 1 ELSE 0 END) as first_set_wins
       FROM prediction_log
-      WHERE correct IS NOT NULL
+      WHERE actual_winner IS NOT NULL
+        AND actual_winner NOT LIKE 'VOID%'
         AND EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
       GROUP BY COALESCE(tour, 'ATP')
     `)
 
     // Get results by tier
+    // Filter by actual_winner to include all reconciled matches
     const tierResult = await pool.query(`
       SELECT
         confidence_tier,
         COUNT(*) as total,
-        SUM(CASE WHEN correct = true THEN 1 ELSE 0 END) as wins
+        SUM(CASE WHEN correct = true OR (correct IS NULL AND actual_winner = predicted_winner) THEN 1 ELSE 0 END) as wins
       FROM prediction_log
-      WHERE correct IS NOT NULL
+      WHERE actual_winner IS NOT NULL
+        AND actual_winner NOT LIKE 'VOID%'
         AND EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
       GROUP BY confidence_tier
       ORDER BY
