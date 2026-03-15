@@ -52,6 +52,15 @@ export default function Admin() {
     matches?: { atp: number; wta: number }
   } | null>(null)
 
+  // Reconcile results
+  const [reconciling, setReconciling] = useState(false)
+  const [reconcileResult, setReconcileResult] = useState<{
+    success: boolean
+    message: string
+    updated?: number
+    details?: string[]
+  } | null>(null)
+
   // User search filter
   const [userSearch, setUserSearch] = useState('')
 
@@ -184,6 +193,43 @@ export default function Admin() {
     }
   }
 
+  const handleReconcile = async () => {
+    if (!confirm('This will fetch completed match results from ESPN and update predictions. Continue?')) return
+
+    setReconciling(true)
+    setReconcileResult(null)
+
+    try {
+      const response = await fetch('/api/admin-reconcile', {
+        method: 'POST',
+        credentials: 'include'
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setReconcileResult({
+          success: true,
+          message: data.message || 'Reconciliation complete',
+          updated: data.updated,
+          details: data.details
+        })
+      } else {
+        setReconcileResult({
+          success: false,
+          message: data.error || 'Reconciliation failed'
+        })
+      }
+    } catch {
+      setReconcileResult({
+        success: false,
+        message: 'Network error'
+      })
+    } finally {
+      setReconciling(false)
+    }
+  }
+
   if (loading || !user?.isAdmin) {
     return (
       <div className="admin-page">
@@ -302,6 +348,37 @@ export default function Admin() {
               <p className="trigger-stats">
                 Matches: {triggerResult.matches.atp} ATP + {triggerResult.matches.wta} WTA
               </p>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Emergency: Reconcile Results */}
+      <section className="admin-section emergency-section">
+        <h2>Emergency: Reconcile Results</h2>
+        <p className="emergency-description">
+          Use this if Railway Oracle is down. This fetches completed match results
+          from ESPN and updates prediction_log with actual_winner and correct fields.
+        </p>
+        <button
+          onClick={handleReconcile}
+          disabled={reconciling}
+          className="trigger-btn"
+        >
+          {reconciling ? 'Reconciling...' : 'Reconcile Results'}
+        </button>
+        {reconcileResult && (
+          <div className={`trigger-result ${reconcileResult.success ? 'success' : 'error'}`}>
+            <p>{reconcileResult.message}</p>
+            {reconcileResult.details && reconcileResult.details.length > 0 && (
+              <div className="reconcile-details">
+                {reconcileResult.details.slice(0, 10).map((d, i) => (
+                  <p key={i} className="reconcile-detail">{d}</p>
+                ))}
+                {reconcileResult.details.length > 10 && (
+                  <p className="reconcile-detail">...and {reconcileResult.details.length - 10} more</p>
+                )}
+              </div>
             )}
           </div>
         )}
