@@ -96,8 +96,8 @@ export default function Pedigree() {
       </p>
 
       <footer className="pedigree-footer">
-        <Link to="/main" className="back-link">
-          Back to menu
+        <Link to="/main" className="menu-btn">
+          Main Menu
         </Link>
       </footer>
 
