@@ -44,8 +44,13 @@ interface GoogleUserInfo {
  *
  * Endpoint: GET /api/auth-callback
  */
-export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
-  const baseUrl = getBaseUrl()
+export const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
+  console.log('[auth-callback] Function invoked')
+  console.log('[auth-callback] Query params:', JSON.stringify(event.queryStringParameters))
+
+  // Get base URL from request headers for accurate redirect
+  const baseUrl = getBaseUrl(event.headers)
+  console.log('[auth-callback] Base URL:', baseUrl)
 
   try {
     // Get query parameters
@@ -94,6 +99,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     }
 
     const redirectUri = `${baseUrl}/.netlify/functions/auth-callback`
+    console.log('[auth-callback] Redirect URI for token exchange:', redirectUri)
 
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -315,7 +321,8 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       body: ''
     }
   } catch (error) {
-    console.error('OAuth callback error:', error)
+    console.error('[auth-callback] UNCAUGHT ERROR:', error)
+    console.error('[auth-callback] Error stack:', error instanceof Error ? error.stack : 'No stack')
     return {
       statusCode: 302,
       headers: { Location: `${baseUrl}/?error=server_error` },

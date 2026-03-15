@@ -208,10 +208,29 @@ export function generateStateToken(): string {
 
 /**
  * Get base URL for redirects (handles local vs production)
+ *
+ * Priority:
+ * 1. Request host header (most reliable in Netlify Functions)
+ * 2. Netlify URL env var
+ * 3. Fallback to localhost for local dev
  */
-export function getBaseUrl(): string {
+export function getBaseUrl(headers?: Record<string, string | undefined>): string {
+  // Try to get host from request headers first (most reliable)
+  if (headers) {
+    const host = headers['host'] || headers['Host']
+    if (host) {
+      const protocol = host.includes('localhost') ? 'http' : 'https'
+      return `${protocol}://${host}`
+    }
+  }
+
   // Netlify sets URL env var in production
-  return process.env.URL || 'http://localhost:8888'
+  if (process.env.URL) {
+    return process.env.URL
+  }
+
+  // Fallback for local development
+  return 'http://localhost:8888'
 }
 
 /**
