@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import './Pedigree.css'
 
 // Backtested performance data
@@ -37,13 +38,27 @@ function PedigreeBox({
 
 export default function Pedigree() {
   const navigate = useNavigate()
+  const { isAuthenticated, loading } = useAuth()
 
   useEffect(() => {
     // Check authentication
-    if (sessionStorage.getItem('ashe-authenticated') !== 'true') {
+    if (!loading && !isAuthenticated) {
       navigate('/')
     }
-  }, [navigate])
+  }, [loading, isAuthenticated, navigate])
+
+  // Show loading while checking auth
+  if (loading) {
+    return (
+      <div className="pedigree-page">
+        <header className="pedigree-header">
+          <h1 className="pedigree-wordmark serif">ASHE</h1>
+          <p className="pedigree-subtitle">Pedigree</p>
+        </header>
+        <p className="loading-text">Loading...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="pedigree-page">

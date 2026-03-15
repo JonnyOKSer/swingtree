@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useFeatureAccess } from './TierGate'
 import './DrawSheet.css'
 
 interface MatchSlot {
@@ -83,6 +84,12 @@ function GlowingTree() {
 function MatchCard({ match }: { match: MatchSlot }) {
   const [expanded, setExpanded] = useState(false)
 
+  // Tier-based feature access
+  const canViewFirstSetWinner = useFeatureAccess('firstSetWinner')
+  const canViewFirstSetScore = useFeatureAccess('firstSetScore')
+  const canViewOverUnder = useFeatureAccess('overUnder')
+  const canViewDivergence = useFeatureAccess('divergence')
+
   const getTierClass = (tier?: string) => {
     switch (tier) {
       case 'STRONG': return 'tier-strong'
@@ -153,7 +160,7 @@ function MatchCard({ match }: { match: MatchSlot }) {
               {predCorrect ? '✓' : '✗'}
             </span>
           )}
-          {match.first_set?.divergence && (
+          {canViewDivergence && match.first_set?.divergence && (
             <span className="divergence-flag" data-tooltip="First set pick differs from match winner">⚡</span>
           )}
         </div>
@@ -175,13 +182,13 @@ function MatchCard({ match }: { match: MatchSlot }) {
         </div>
         {match.score && <div className="match-score">{match.score}</div>}
 
-        {match.first_set && (
+        {canViewFirstSetWinner && match.first_set && (
           <div className="first-set-line">
             <span>
-              1st: {match.first_set.predicted_winner?.split(' ').pop()} {match.first_set.predicted_score}
-              {match.first_set.score_correct && <GlowingTree />}
+              1st: {match.first_set.predicted_winner?.split(' ').pop()} {canViewFirstSetScore ? match.first_set.predicted_score : ''}
+              {canViewFirstSetScore && match.first_set.score_correct && <GlowingTree />}
             </span>
-            <span>TB:{match.first_set.tiebreak_pct}%</span>
+            {canViewOverUnder && <span>TB:{match.first_set.tiebreak_pct}%</span>}
           </div>
         )}
       </div>
@@ -198,7 +205,7 @@ function MatchCard({ match }: { match: MatchSlot }) {
       >
         <div className="match-header">
           <span className={`tier-badge ${getTierClass(pred.tier)}`}>{getTierDisplay(pred.tier)}</span>
-          {match.first_set?.divergence && (
+          {canViewDivergence && match.first_set?.divergence && (
             <span className="divergence-flag" data-tooltip="First set pick differs from match winner">⚡</span>
           )}
         </div>
@@ -219,14 +226,14 @@ function MatchCard({ match }: { match: MatchSlot }) {
           )}
         </div>
 
-        {match.first_set && (
+        {canViewFirstSetWinner && match.first_set && (
           <div className="first-set-line">
-            <span>1st: {match.first_set.predicted_winner?.split(' ').pop()} {match.first_set.predicted_score}</span>
-            <span>TB: {match.first_set.tiebreak_pct}%</span>
+            <span>1st: {match.first_set.predicted_winner?.split(' ').pop()} {canViewFirstSetScore ? match.first_set.predicted_score : ''}</span>
+            {canViewOverUnder && <span>TB: {match.first_set.tiebreak_pct}%</span>}
           </div>
         )}
 
-        {expanded && match.first_set && (
+        {expanded && canViewOverUnder && match.first_set && (
           <div className="match-details">
             <div className="detail-row">
               <span className="detail-label">O/U 9.5</span>
@@ -268,6 +275,9 @@ export default function DrawSheet({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const bracketRef = useRef<HTMLDivElement>(null)
+
+  // Tier-based access for legend
+  const canViewDivergence = useFeatureAccess('divergence')
 
   useEffect(() => {
     const fetchDraw = async () => {
@@ -359,10 +369,12 @@ export default function DrawSheet({
             <span className="legend-box tier-skip" />
             <span>SKIP</span>
           </div>
-          <div className="legend-item legend-tooltip" data-tooltip="Predicted winner will lose first set">
-            <span className="divergence-icon">⚡</span>
-            <span>Divergence</span>
-          </div>
+          {canViewDivergence && (
+            <div className="legend-item legend-tooltip" data-tooltip="Predicted winner will lose first set">
+              <span className="divergence-icon">⚡</span>
+              <span>Divergence</span>
+            </div>
+          )}
         </div>
 
         <div className="draw-bracket" ref={bracketRef}>

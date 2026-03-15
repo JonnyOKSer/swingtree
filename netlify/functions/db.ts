@@ -9,8 +9,7 @@ export function getPool(): Pool {
       throw new Error('DATABASE_URL environment variable is not set')
     }
     pool = new Pool({
-      connectionString,
-      ssl: { rejectUnauthorized: false }
+      connectionString
     })
   }
   return pool

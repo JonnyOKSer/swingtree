@@ -5,18 +5,17 @@
 [build.environment]
   NODE_VERSION = "20"
 
+[dev]
+  command = "npm run dev"
+  targetPort = 5173
+  autoLaunch = false
+
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# API routes (must come before SPA catch-all)
+# API routes
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
-  status = 200
-
-# SPA fallback
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
   status = 200

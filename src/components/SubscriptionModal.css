@@ -1,0 +1,228 @@
+.subscription-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.subscription-modal {
+  position: relative;
+  background: var(--obsidian);
+  border: 1px solid var(--ash-grey);
+  padding: 48px;
+  max-width: 900px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.close-modal {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: var(--ash-grey);
+  font-size: 24px;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.close-modal:hover {
+  color: var(--flash-white);
+}
+
+.modal-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.modal-header h2 {
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--flash-white);
+  margin: 0 0 8px 0;
+}
+
+.modal-subtitle {
+  font-size: 14px;
+  color: var(--ash-grey);
+  margin: 0;
+}
+
+.tier-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+@media (max-width: 768px) {
+  .tier-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tier-card {
+  position: relative;
+  border: 1px solid var(--ash-grey);
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+.tier-card:hover {
+  border-color: var(--serengeti-gold);
+}
+
+.tier-card.highlighted {
+  border-color: var(--serengeti-gold);
+  box-shadow: 0 0 30px var(--gold-dim);
+}
+
+.tier-card.selected {
+  border-color: var(--serengeti-gold);
+  background: rgba(196, 151, 59, 0.05);
+}
+
+.tier-badge-popular {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--serengeti-gold);
+  color: var(--obsidian);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  white-space: nowrap;
+}
+
+.tier-name {
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--flash-white);
+  margin: 0 0 16px 0;
+  text-align: center;
+}
+
+.tier-price {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.price-amount {
+  font-size: 36px;
+  font-weight: 300;
+  color: var(--serengeti-gold);
+}
+
+.price-period {
+  font-size: 14px;
+  color: var(--ash-grey);
+}
+
+.tier-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+  flex: 1;
+}
+
+.tier-features li {
+  font-size: 13px;
+  color: var(--flash-white);
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tier-features li::before {
+  content: '✓';
+  color: var(--serengeti-gold);
+  font-size: 12px;
+}
+
+.subscribe-btn {
+  padding: 14px 24px;
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--ash-grey);
+  color: var(--flash-white);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.subscribe-btn:hover {
+  border-color: var(--serengeti-gold);
+  color: var(--serengeti-gold);
+  box-shadow: 0 0 20px var(--gold-dim);
+}
+
+.tier-card.highlighted .subscribe-btn {
+  border-color: var(--serengeti-gold);
+  color: var(--serengeti-gold);
+}
+
+.tier-card.highlighted .subscribe-btn:hover {
+  background: var(--serengeti-gold);
+  color: var(--obsidian);
+}
+
+.spots-remaining {
+  text-align: center;
+  font-size: 14px;
+  color: var(--ash-grey);
+  margin: 0;
+}
+
+.spots-number {
+  color: var(--serengeti-gold);
+  font-weight: 600;
+}
+
+.coming-soon-notice {
+  margin-top: 24px;
+  text-align: center;
+  padding: 16px;
+  background: rgba(196, 151, 59, 0.1);
+  border: 1px solid var(--gold-dim);
+}
+
+.coming-soon-notice p {
+  font-size: 13px;
+  color: var(--ash-grey);
+  margin: 0;
+  line-height: 1.6;
+}

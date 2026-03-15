@@ -59,6 +59,19 @@
   text-transform: uppercase;
 }
 
+.user-email {
+  font-size: 12px;
+  color: var(--ash-grey);
+  margin: -48px 0 0 0;
+  letter-spacing: 1px;
+}
+
+.loading-text {
+  font-size: 14px;
+  color: var(--ash-grey);
+  letter-spacing: 2px;
+}
+
 @media (max-width: 768px) {
   .menu-options {
     grid-template-columns: repeat(2, 1fr);

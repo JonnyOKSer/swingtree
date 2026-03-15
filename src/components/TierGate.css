@@ -1,0 +1,55 @@
+.tier-gate {
+  position: relative;
+}
+
+.tier-gate-content.blurred {
+  filter: blur(4px);
+  user-select: none;
+  pointer-events: none;
+}
+
+.tier-gate-content.hidden {
+  display: none;
+}
+
+.tier-gate-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.tier-lock-icon {
+  font-size: 14px;
+}
+
+.tier-upgrade-text {
+  font-size: 10px;
+  color: var(--ash-grey);
+  letter-spacing: 0.5px;
+}
+
+/* Inline gating (for spans within text) */
+.tier-gate-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tier-gate-inline .tier-gate-content.blurred {
+  filter: blur(3px);
+  user-select: none;
+}
+
+.tier-gate-inline .tier-lock {
+  font-size: 10px;
+  opacity: 0.7;
+}
