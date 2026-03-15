@@ -80,26 +80,24 @@
   border: 1px solid var(--ash-grey);
   color: var(--flash-white);
   outline: none;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-  caret-color: transparent;
+  caret-color: var(--serengeti-gold);
+  animation: borderPulse 4s ease-in-out infinite;
 }
 
 .code-input:focus {
+  animation: none;
   border-color: var(--serengeti-gold);
   box-shadow: 0 0 20px var(--gold-dim);
 }
 
 .code-input::placeholder {
   color: var(--ash-grey);
-  animation: placeholderPulse 10s ease-in-out infinite;
+  opacity: 0.6;
 }
 
-@keyframes placeholderPulse {
-  0% { opacity: 0.6; }
-  40% { opacity: 0.6; }
-  50% { opacity: 0; }
-  90% { opacity: 0; }
-  100% { opacity: 0.6; }
+@keyframes borderPulse {
+  0%, 100% { border-color: var(--ash-grey); }
+  50% { border-color: var(--serengeti-gold); box-shadow: 0 0 15px var(--gold-dim); }
 }
 
 .enter-btn {
