@@ -170,8 +170,8 @@ export default function Results() {
             Back to menu
           </Link>
         ) : (
-          <Link to="/" className="back-link">
-            Enter oracle
+          <Link to="/" className="enter-btn">
+            Enter the ASHE
           </Link>
         )}
       </footer>

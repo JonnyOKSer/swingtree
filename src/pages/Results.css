@@ -103,7 +103,9 @@
 }
 
 .results-footer {
-  margin-top: 48px;
+  margin-top: 56px;
+  margin-bottom: 48px;
+  text-align: center;
 }
 
 .back-link {
@@ -116,6 +118,49 @@
 
 .back-link:hover {
   color: var(--serengeti-gold);
+}
+
+.enter-btn {
+  display: inline-block;
+  padding: 18px 48px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--charcoal);
+  background: linear-gradient(135deg, var(--serengeti-gold) 0%, #d4a74b 50%, var(--serengeti-gold) 100%);
+  border: 2px solid var(--serengeti-gold);
+  box-shadow: 0 0 30px var(--gold-dim), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.enter-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.enter-btn:hover {
+  background: linear-gradient(135deg, #d4a74b 0%, #e4b75b 50%, #d4a74b 100%);
+  box-shadow: 0 0 50px var(--gold-glow), 0 0 80px var(--gold-dim);
+  transform: translateY(-2px);
+}
+
+.enter-btn:hover::before {
+  left: 100%;
+}
+
+.enter-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 0 20px var(--gold-dim);
 }
 
 /* FAQ Section */
