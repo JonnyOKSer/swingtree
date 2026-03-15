@@ -15,9 +15,9 @@ export default function Privacy() {
         <section>
           <h2>Who We Are</h2>
           <p>
-            ASHE is a tennis prediction service operated by swingtree.ai. This Privacy Policy
-            explains how we collect, use, and protect your personal information when you use
-            our service.
+            ASHE is a tennis prediction service operated by swingtree.ai, a property of
+            FDMN Ventures, LLC. This Privacy Policy explains how we collect, use, and protect
+            your personal information when you use our service.
           </p>
         </section>
 

@@ -32,9 +32,9 @@ export default function Terms() {
         <section>
           <h2>Acceptance of Terms</h2>
           <p>
-            By accessing or using ASHE (the "Service"), operated by swingtree.ai, you agree
-            to be bound by these Terms and Conditions. If you do not agree to these terms,
-            do not use the Service.
+            By accessing or using ASHE (the "Service"), operated by swingtree.ai, a property
+            of FDMN Ventures, LLC, you agree to be bound by these Terms and Conditions. If
+            you do not agree to these terms, do not use the Service.
           </p>
         </section>
 
