@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import SerengetiScene from '../components/SerengetiScene'
+import Footer from '../components/Footer'
 import './GatedEntrance.css'
 
 export default function GatedEntrance() {
@@ -187,6 +188,8 @@ export default function GatedEntrance() {
         <Link to="/results" className="track-record-link">
           View our track record
         </Link>
+
+        <Footer />
       </div>
 
       {/* Welcome Overlay for new users */}

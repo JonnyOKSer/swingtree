@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import Footer from '../components/Footer'
 import './MainMenu.css'
 
 export default function MainMenu() {
@@ -49,6 +50,8 @@ export default function MainMenu() {
           <span className="option-label">Peace</span>
         </button>
       </nav>
+
+      <Footer />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import Footer from '../components/Footer'
 import './Pedigree.css'
 
 // Backtested performance data
@@ -99,6 +100,8 @@ export default function Pedigree() {
           Back to menu
         </Link>
       </footer>
+
+      <Footer />
     </div>
   )
 }

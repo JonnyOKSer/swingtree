@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import Footer from '../components/Footer'
 import './Results.css'
 
 // FAQ data
@@ -174,6 +175,8 @@ export default function Results() {
           </Link>
         )}
       </footer>
+
+      <Footer />
     </div>
   )
 }

@@ -6,6 +6,8 @@ import Predict from './pages/Predict'
 import Results from './pages/Results'
 import Pedigree from './pages/Pedigree'
 import Admin from './pages/Admin'
+import Privacy from './pages/Privacy'
+import Terms from './pages/Terms'
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
           <Route path="/results" element={<Results />} />
           <Route path="/pedigree" element={<Pedigree />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

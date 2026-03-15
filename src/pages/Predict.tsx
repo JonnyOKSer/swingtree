@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import WorldMap, { type Tournament } from '../components/WorldMap'
 import DrawSheet from '../components/DrawSheet'
 import SubscriptionModal from '../components/SubscriptionModal'
+import Footer from '../components/Footer'
 import './Predict.css'
 
 export default function Predict() {
@@ -94,6 +95,8 @@ export default function Predict() {
           }}
         />
       )}
+
+      <Footer />
     </div>
   )
 }

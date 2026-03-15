@@ -1,0 +1,149 @@
+.legal-page {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #e8e0d0;
+  padding: 40px 20px 80px;
+}
+
+.legal-header {
+  text-align: center;
+  margin-bottom: 48px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.legal-wordmark {
+  display: block;
+  font-size: 32px;
+  color: #c4973b;
+  text-decoration: none;
+  margin-bottom: 16px;
+  letter-spacing: 0.15em;
+}
+
+.legal-wordmark:hover {
+  color: #d4a74b;
+}
+
+.legal-header h1 {
+  font-family: 'EB Garamond', serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: #e8e0d0;
+  margin: 0 0 8px;
+}
+
+.legal-updated {
+  font-size: 13px;
+  color: #8a8a7a;
+  margin: 0;
+}
+
+.legal-content {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.legal-content section {
+  margin-bottom: 40px;
+}
+
+.legal-content h2 {
+  font-family: 'EB Garamond', serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: #c4973b;
+  margin: 0 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.legal-content p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #c8c0b0;
+  margin: 0 0 12px;
+}
+
+.legal-content ul {
+  margin: 0 0 16px;
+  padding-left: 24px;
+}
+
+.legal-content li {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #c8c0b0;
+  margin-bottom: 8px;
+}
+
+.legal-content a {
+  color: #c4973b;
+  text-decoration: none;
+}
+
+.legal-content a:hover {
+  text-decoration: underline;
+}
+
+.legal-content strong {
+  color: #e8e0d0;
+  font-weight: 500;
+}
+
+/* Disclaimer section styling */
+.legal-disclaimer {
+  background: rgba(196, 151, 59, 0.08);
+  border: 1px solid rgba(196, 151, 59, 0.3);
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 40px;
+}
+
+.legal-disclaimer h2 {
+  color: #e8e0d0;
+  border-bottom: none;
+  margin-bottom: 20px;
+  padding-bottom: 0;
+}
+
+.disclaimer-box {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  padding: 20px;
+}
+
+.disclaimer-box p {
+  font-size: 15px;
+  color: #e8e0d0;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.disclaimer-box p:last-child {
+  margin-bottom: 0;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .legal-page {
+    padding: 24px 16px 60px;
+  }
+
+  .legal-header h1 {
+    font-size: 24px;
+  }
+
+  .legal-content h2 {
+    font-size: 18px;
+  }
+
+  .legal-content p,
+  .legal-content li {
+    font-size: 13px;
+  }
+
+  .disclaimer-box p {
+    font-size: 14px;
+  }
+}
