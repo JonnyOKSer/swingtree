@@ -1,3 +1,4 @@
+import type { Handler } from '@netlify/functions'
 import { getPool } from './db.js'
 
 /**
@@ -6,6 +7,8 @@ import { getPool } from './db.js'
  * Runs every 10 minutes, 24/7. Checks ESPN for recently completed matches,
  * matches them against unreconciled predictions in prediction_log, and
  * updates actual_winner and correct fields.
+ *
+ * Can also be triggered via HTTP GET for testing.
  */
 
 const ESPN_ATP_URL = 'https://site.api.espn.com/apis/site/v2/sports/tennis/atp/scoreboard'
@@ -106,114 +109,126 @@ async function fetchCompletedMatches(tour: 'ATP' | 'WTA'): Promise<CompletedMatc
   }
 }
 
-export default async function handler() {
+async function runReconciliation(): Promise<{
+  success: boolean
+  message: string
+  checked: number
+  updated: number
+  duration: number
+}> {
   const startTime = Date.now()
   console.log(`[AUTO-RECONCILE] Starting at ${new Date().toISOString()}`)
 
+  const pool = getPool()
+
+  // Check for unreconciled predictions first (quick exit if none)
+  const unreconciledResult = await pool.query(`
+    SELECT id, tournament, round, player_a, player_b, predicted_winner, tour
+    FROM prediction_log
+    WHERE actual_winner IS NULL
+      AND prediction_date >= CURRENT_DATE - INTERVAL '7 days'
+      AND confidence_tier != 'VOID'
+    ORDER BY prediction_date DESC
+  `)
+
+  if (unreconciledResult.rows.length === 0) {
+    console.log('[AUTO-RECONCILE] No unreconciled predictions, exiting')
+    return {
+      success: true,
+      message: 'No unreconciled predictions',
+      checked: 0,
+      updated: 0,
+      duration: Date.now() - startTime
+    }
+  }
+
+  console.log(`[AUTO-RECONCILE] Found ${unreconciledResult.rows.length} unreconciled predictions`)
+
+  // Fetch completed matches from ESPN
+  const atpMatches = await fetchCompletedMatches('ATP')
+  const wtaMatches = await fetchCompletedMatches('WTA')
+  const allMatches = [...atpMatches, ...wtaMatches]
+
+  console.log(`[AUTO-RECONCILE] ESPN: ${atpMatches.length} ATP + ${wtaMatches.length} WTA completed`)
+
+  if (allMatches.length === 0) {
+    console.log('[AUTO-RECONCILE] No completed matches from ESPN, exiting')
+    return {
+      success: true,
+      message: 'No completed matches from ESPN',
+      checked: unreconciledResult.rows.length,
+      updated: 0,
+      duration: Date.now() - startTime
+    }
+  }
+
+  // Match predictions to results
+  let updated = 0
+  for (const pred of unreconciledResult.rows) {
+    const matchingResult = allMatches.find(m => {
+      const tournamentMatch =
+        m.tournament.toLowerCase().includes(pred.tournament.toLowerCase()) ||
+        pred.tournament.toLowerCase().includes(m.tournament.toLowerCase()) ||
+        (m.tournament.toLowerCase().includes('indian wells') && pred.tournament.toLowerCase().includes('indian wells')) ||
+        (m.tournament.toLowerCase().includes('bnp paribas') && pred.tournament.toLowerCase().includes('indian wells'))
+
+      if (!tournamentMatch) return false
+      if (m.round !== pred.round) return false
+      if (m.tour !== (pred.tour || 'ATP')) return false
+
+      const playersMatchOrder1 =
+        playersMatch(m.player1, pred.player_a) && playersMatch(m.player2, pred.player_b)
+      const playersMatchOrder2 =
+        playersMatch(m.player1, pred.player_b) && playersMatch(m.player2, pred.player_a)
+
+      return playersMatchOrder1 || playersMatchOrder2
+    })
+
+    if (matchingResult) {
+      const correct = playersMatch(matchingResult.winner, pred.predicted_winner)
+
+      await pool.query(`
+        UPDATE prediction_log
+        SET actual_winner = $1, correct = $2
+        WHERE id = $3
+      `, [matchingResult.winner, correct, pred.id])
+
+      updated++
+      console.log(`[AUTO-RECONCILE] ${correct ? '✓' : '✗'} ${pred.player_a} vs ${pred.player_b} → ${matchingResult.winner}`)
+    }
+  }
+
+  const duration = Date.now() - startTime
+  console.log(`[AUTO-RECONCILE] Complete: ${updated}/${unreconciledResult.rows.length} reconciled in ${duration}ms`)
+
+  return {
+    success: true,
+    message: `Reconciled ${updated} of ${unreconciledResult.rows.length} predictions`,
+    checked: unreconciledResult.rows.length,
+    updated,
+    duration
+  }
+}
+
+// Handler for both scheduled and HTTP invocations
+export const handler: Handler = async (event) => {
+  const headers = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*'
+  }
+
   try {
-    const pool = getPool()
-
-    // Check for unreconciled predictions first (quick exit if none)
-    const unreconciledResult = await pool.query(`
-      SELECT id, tournament, round, player_a, player_b, predicted_winner, tour
-      FROM prediction_log
-      WHERE actual_winner IS NULL
-        AND prediction_date >= CURRENT_DATE - INTERVAL '7 days'
-        AND confidence_tier != 'VOID'
-      ORDER BY prediction_date DESC
-    `)
-
-    if (unreconciledResult.rows.length === 0) {
-      console.log('[AUTO-RECONCILE] No unreconciled predictions, exiting')
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          success: true,
-          message: 'No unreconciled predictions',
-          checked: 0,
-          updated: 0,
-          duration: Date.now() - startTime
-        })
-      }
-    }
-
-    console.log(`[AUTO-RECONCILE] Found ${unreconciledResult.rows.length} unreconciled predictions`)
-
-    // Fetch completed matches from ESPN
-    const atpMatches = await fetchCompletedMatches('ATP')
-    const wtaMatches = await fetchCompletedMatches('WTA')
-    const allMatches = [...atpMatches, ...wtaMatches]
-
-    console.log(`[AUTO-RECONCILE] ESPN: ${atpMatches.length} ATP + ${wtaMatches.length} WTA completed`)
-
-    if (allMatches.length === 0) {
-      console.log('[AUTO-RECONCILE] No completed matches from ESPN, exiting')
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          success: true,
-          message: 'No completed matches from ESPN',
-          checked: unreconciledResult.rows.length,
-          updated: 0,
-          duration: Date.now() - startTime
-        })
-      }
-    }
-
-    // Match predictions to results
-    let updated = 0
-    for (const pred of unreconciledResult.rows) {
-      const matchingResult = allMatches.find(m => {
-        const tournamentMatch =
-          m.tournament.toLowerCase().includes(pred.tournament.toLowerCase()) ||
-          pred.tournament.toLowerCase().includes(m.tournament.toLowerCase()) ||
-          (m.tournament.toLowerCase().includes('indian wells') && pred.tournament.toLowerCase().includes('indian wells')) ||
-          (m.tournament.toLowerCase().includes('bnp paribas') && pred.tournament.toLowerCase().includes('indian wells'))
-
-        if (!tournamentMatch) return false
-        if (m.round !== pred.round) return false
-        if (m.tour !== (pred.tour || 'ATP')) return false
-
-        const playersMatchOrder1 =
-          playersMatch(m.player1, pred.player_a) && playersMatch(m.player2, pred.player_b)
-        const playersMatchOrder2 =
-          playersMatch(m.player1, pred.player_b) && playersMatch(m.player2, pred.player_a)
-
-        return playersMatchOrder1 || playersMatchOrder2
-      })
-
-      if (matchingResult) {
-        const correct = playersMatch(matchingResult.winner, pred.predicted_winner)
-
-        await pool.query(`
-          UPDATE prediction_log
-          SET actual_winner = $1, correct = $2
-          WHERE id = $3
-        `, [matchingResult.winner, correct, pred.id])
-
-        updated++
-        console.log(`[AUTO-RECONCILE] ${correct ? '✓' : '✗'} ${pred.player_a} vs ${pred.player_b} → ${matchingResult.winner}`)
-      }
-    }
-
-    const duration = Date.now() - startTime
-    console.log(`[AUTO-RECONCILE] Complete: ${updated}/${unreconciledResult.rows.length} reconciled in ${duration}ms`)
-
+    const result = await runReconciliation()
     return {
       statusCode: 200,
-      body: JSON.stringify({
-        success: true,
-        message: `Reconciled ${updated} of ${unreconciledResult.rows.length} predictions`,
-        checked: unreconciledResult.rows.length,
-        updated,
-        duration
-      })
+      headers,
+      body: JSON.stringify(result)
     }
-
   } catch (error) {
     console.error('[AUTO-RECONCILE] Error:', error)
     return {
       statusCode: 500,
+      headers,
       body: JSON.stringify({
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'

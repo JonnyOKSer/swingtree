@@ -152,7 +152,7 @@ export default function Results() {
       )}
 
       <p className="results-note">
-        Season-to-date results. PICK tier and above.
+        Active Since March 13 2026. Includes Strong, Confident and Pick prediction tiers -- does not include the Skipped matches.
       </p>
 
       <section className="faq-section">
