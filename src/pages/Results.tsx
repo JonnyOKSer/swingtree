@@ -152,7 +152,7 @@ export default function Results() {
       )}
 
       <p className="results-note">
-        Active Since March 13 2026. Includes Strong, Confident and Pick prediction tiers -- does not include the Skipped matches.
+        Activation Date: March 13 2026. Match Records include Strong, Confident, Pick Tier Predictions while 1st Set Stats include All Prediction Tiers + Recommended Skips.
       </p>
 
       <section className="faq-section">
