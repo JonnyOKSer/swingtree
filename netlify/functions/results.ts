@@ -31,17 +31,30 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // Get overall results by tour
     // For match wins: exclude SKIP tier, only count PICK and above (STRONG, CONFIDENT, PICK, LEAN)
     // For first set: include all tiers
-    // Use DISTINCT ON to deduplicate same-day predictions for same matchup
+    // Deduplicate by tournament+round+players to prevent same match from counting twice
+    // Keep the prediction with highest confidence tier (lowest ordinal)
     const overallResult = await pool.query(`
-      WITH deduplicated AS (
-        SELECT DISTINCT ON (prediction_date, LEAST(player_a, player_b), GREATEST(player_a, player_b), tour)
-          id, tour, confidence_tier, correct, predicted_winner, actual_winner,
-          first_set_correct, first_set_score_correct
+      WITH ranked AS (
+        SELECT *,
+          ROW_NUMBER() OVER (
+            PARTITION BY LOWER(tournament), round, LEAST(LOWER(player_a), LOWER(player_b)), GREATEST(LOWER(player_a), LOWER(player_b)), tour
+            ORDER BY
+              CASE confidence_tier
+                WHEN 'STRONG' THEN 1
+                WHEN 'CONFIDENT' THEN 2
+                WHEN 'PICK' THEN 3
+                WHEN 'LEAN' THEN 4
+                ELSE 5
+              END,
+              prediction_date DESC
+          ) as rn
         FROM prediction_log
         WHERE actual_winner IS NOT NULL
           AND actual_winner NOT LIKE 'VOID%'
           AND EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
-        ORDER BY prediction_date, LEAST(player_a, player_b), GREATEST(player_a, player_b), tour, id
+      ),
+      deduplicated AS (
+        SELECT * FROM ranked WHERE rn = 1
       )
       SELECT
         COALESCE(tour, 'ATP') as tour,
@@ -54,16 +67,29 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       GROUP BY COALESCE(tour, 'ATP')
     `)
 
-    // Get results by tier (with deduplication)
+    // Get results by tier (with deduplication by tournament+round+players)
     const tierResult = await pool.query(`
-      WITH deduplicated AS (
-        SELECT DISTINCT ON (prediction_date, LEAST(player_a, player_b), GREATEST(player_a, player_b), tour)
-          id, confidence_tier, correct, predicted_winner, actual_winner
+      WITH ranked AS (
+        SELECT *,
+          ROW_NUMBER() OVER (
+            PARTITION BY LOWER(tournament), round, LEAST(LOWER(player_a), LOWER(player_b)), GREATEST(LOWER(player_a), LOWER(player_b)), tour
+            ORDER BY
+              CASE confidence_tier
+                WHEN 'STRONG' THEN 1
+                WHEN 'CONFIDENT' THEN 2
+                WHEN 'PICK' THEN 3
+                WHEN 'LEAN' THEN 4
+                ELSE 5
+              END,
+              prediction_date DESC
+          ) as rn
         FROM prediction_log
         WHERE actual_winner IS NOT NULL
           AND actual_winner NOT LIKE 'VOID%'
           AND EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
-        ORDER BY prediction_date, LEAST(player_a, player_b), GREATEST(player_a, player_b), tour, id
+      ),
+      deduplicated AS (
+        SELECT * FROM ranked WHERE rn = 1
       )
       SELECT
         confidence_tier,
@@ -148,10 +174,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       lastUpdated: new Date().toISOString()
     }
 
-    // Debug mode: show raw predictions if ?debug=true
+    // Debug mode: show raw and deduplicated predictions if ?debug=true
     const queryParams = event.queryStringParameters || {}
     if (queryParams.debug === 'true') {
-      const debugResult = await pool.query(`
+      const rawResult = await pool.query(`
         SELECT id, prediction_date, tour, tournament, round, player_a, player_b,
                predicted_winner, actual_winner, confidence_tier, correct
         FROM prediction_log
@@ -160,13 +186,44 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         ORDER BY prediction_date DESC, id DESC
         LIMIT 50
       `)
+      const dedupedResult = await pool.query(`
+        WITH ranked AS (
+          SELECT id, prediction_date, tour, tournament, round, player_a, player_b,
+                 predicted_winner, actual_winner, confidence_tier, correct,
+            ROW_NUMBER() OVER (
+              PARTITION BY LOWER(tournament), round, LEAST(LOWER(player_a), LOWER(player_b)), GREATEST(LOWER(player_a), LOWER(player_b)), tour
+              ORDER BY
+                CASE confidence_tier
+                  WHEN 'STRONG' THEN 1
+                  WHEN 'CONFIDENT' THEN 2
+                  WHEN 'PICK' THEN 3
+                  WHEN 'LEAN' THEN 4
+                  ELSE 5
+                END,
+                prediction_date DESC
+            ) as rn
+          FROM prediction_log
+          WHERE actual_winner IS NOT NULL
+            AND actual_winner NOT LIKE 'VOID%'
+            AND EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+        )
+        SELECT id, prediction_date, tour, tournament, round, player_a, player_b,
+               predicted_winner, actual_winner, confidence_tier, correct
+        FROM ranked WHERE rn = 1
+        ORDER BY prediction_date DESC, id DESC
+      `)
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           success: true,
           results,
-          debug: debugResult.rows
+          debug: {
+            raw: rawResult.rows,
+            deduplicated: dedupedResult.rows,
+            rawCount: rawResult.rows.length,
+            dedupedCount: dedupedResult.rows.length
+          }
         })
       }
     }
