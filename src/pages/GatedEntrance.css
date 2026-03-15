@@ -82,12 +82,6 @@
   outline: none;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
   caret-color: var(--serengeti-gold);
-  animation: caretBlink 3s ease-in-out infinite;
-}
-
-@keyframes caretBlink {
-  0%, 85%, 100% { caret-color: var(--serengeti-gold); }
-  92% { caret-color: transparent; }
 }
 
 .code-input:focus {
@@ -97,7 +91,15 @@
 
 .code-input::placeholder {
   color: var(--ash-grey);
-  opacity: 0.5;
+  animation: placeholderPulse 10s ease-in-out infinite;
+}
+
+@keyframes placeholderPulse {
+  0% { opacity: 0; }
+  10% { opacity: 0.6; }
+  40% { opacity: 0.6; }
+  50% { opacity: 0; }
+  100% { opacity: 0; }
 }
 
 .enter-btn {
