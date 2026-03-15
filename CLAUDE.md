@@ -366,3 +366,78 @@ Production URL: https://swingtree.ai
 - `netlify/functions/auth-callback.ts` - OAuth callback, user creation
 - `netlify/functions/auth-session.ts` - Session verification
 - `netlify/functions/auth-utils.ts` - JWT, cookies, helpers
+
+---
+
+## Tournament Notifications (tennis-oracle repo)
+
+### Overview
+
+Automated email notifications sent 3 days before tournament start dates.
+
+**File:** `agent/tournament_notifications.py`
+**Schedule:** Daily at 8am EST (13:00 UTC)
+
+### How It Works
+
+1. Query `tournaments` table for events starting in 3 days
+2. For each tournament, determine eligible tiers:
+   - Grand Slams/Masters: ALL tiers (trial, baseline, all_court, tree_top, comp)
+   - ATP/WTA 500/250: all_court, tree_top, comp only
+3. Query `users` table for matching active subscribers
+4. Send email via Resend API
+5. Log to `notification_log` table (prevents duplicates)
+
+### Database Tables
+
+**tournaments** (added columns):
+```sql
+start_date DATE
+end_date DATE
+```
+
+**notification_log**:
+```sql
+CREATE TABLE notification_log (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    tournament_id INTEGER REFERENCES tournaments(tournament_id),
+    notification_type VARCHAR(50) DEFAULT 'tournament_upcoming',
+    sent_at TIMESTAMP DEFAULT NOW(),
+    email_sent_to VARCHAR(255)
+);
+```
+
+### Environment Variables (Railway)
+
+```
+RESEND_API_KEY=re_...
+RESEND_FROM_EMAIL=ASHE <noreply@swingtree.ai>
+```
+
+### Resend Domain Setup
+
+To send from @swingtree.ai:
+1. Add swingtree.ai domain in Resend dashboard
+2. Add DNS records (DKIM, SPF) to GoDaddy
+3. Verify domain in Resend
+
+### Testing
+
+```bash
+# Set a tournament start_date to 3 days from today
+UPDATE tournaments SET start_date = CURRENT_DATE + INTERVAL '3 days' WHERE name ILIKE '%Miami%';
+
+# Run manually
+python -m agent.tournament_notifications
+```
+
+### Future Notification Types
+
+The `notification_type` field supports:
+- `tournament_upcoming` - 3 days before (implemented)
+- `draw_released` - when predictions are available
+- `daily_picks` - morning email with today's predictions
+- `results_recap` - evening email with results
+- `trial_expiring` - 1 day before trial ends
+- `payment_failed` - Stripe payment issue

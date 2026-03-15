@@ -23,7 +23,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "How often is ASHE updated?",
-    answer: "ASHE runs autonomously every day at 6 AM EST. It reconciles yesterday's predictions against actual results, updates player ratings with new match data, and generates fresh predictions for today's scheduled matches across both ATP and WTA tours."
+    answer: "ASHE runs autonomously. Predictions are generated daily for upcoming matches across ATP and WTA tours, and results are reconciled regularly throughout the day. Player ratings update automatically as matches complete."
   }
 ]
 
