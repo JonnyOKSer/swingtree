@@ -22,7 +22,7 @@ const ESPN_ATP_URL = 'https://site.api.espn.com/apis/site/v2/sports/tennis/atp/s
 const ESPN_WTA_URL = 'https://site.api.espn.com/apis/site/v2/sports/tennis/wta/scoreboard'
 
 // Tennis Oracle HTTP trigger endpoint (Railway)
-const ORACLE_TRIGGER_URL = process.env.ORACLE_TRIGGER_URL || 'https://tennis-oracle-production.up.railway.app'
+const ORACLE_TRIGGER_URL = process.env.ORACLE_TRIGGER_URL || 'https://agent-production-765b.up.railway.app'
 const ORACLE_API_KEY = process.env.ORACLE_API_KEY || 'ashe-trigger-secret'
 
 interface ESPNCompetitor {
