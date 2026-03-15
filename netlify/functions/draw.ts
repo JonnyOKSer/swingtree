@@ -260,17 +260,28 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // Step 5: Build complete bracket structure
     const rounds: Round[] = []
 
-    // Find current round: the latest round that has pending predictions
-    // Scan rounds from latest (F) to earliest (R128)
+    // Find current round: prioritize today's predictions, then fall back to pending predictions
+    // This ensures we show "Finals" if today's matches are Finals, even if yesterday's QF are complete
     let currentRound = config.rounds[0] // Default to first round
+    const today = new Date().toISOString().split('T')[0]
 
     // Check from latest round backwards
     for (let i = config.rounds.length - 1; i >= 0; i--) {
       const roundName = config.rounds[i]
       const predictions = predictionsByRound[roundName] || []
       if (predictions.length > 0) {
+        // Check if this round has today's predictions (indicates current round)
+        const hasTodayPredictions = predictions.some(p => {
+          const predDate = typeof p.prediction_date === 'string'
+            ? p.prediction_date.split('T')[0]
+            : p.prediction_date?.toISOString?.()?.split('T')[0]
+          return predDate === today
+        })
+
+        // Or has pending predictions (not yet resolved)
         const hasPending = predictions.some(p => !p.actual_winner || p.actual_winner?.startsWith('VOID'))
-        if (hasPending) {
+
+        if (hasTodayPredictions || hasPending) {
           currentRound = roundName
           break
         }

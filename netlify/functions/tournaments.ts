@@ -73,23 +73,53 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // Get tournaments with recent predictions (active tournaments)
     // A tournament is "active" if it has predictions in the last 14 days
     // Include all tiers (including SKIP) so WTA shows
+    // Also get today's round to prioritize current-day matches over historical completed ones
     const recentPredictionsResult = await pool.query(`
       SELECT
         tournament,
         COALESCE(tour, 'ATP') as tour,
         COUNT(*) as pred_count,
         COUNT(CASE WHEN actual_winner IS NOT NULL THEN 1 END) as completed_count,
-        MAX(prediction_date) as last_pred_date
+        MAX(prediction_date) as last_pred_date,
+        MAX(CASE WHEN prediction_date = CURRENT_DATE THEN round END) as today_round,
+        COUNT(CASE WHEN prediction_date = CURRENT_DATE THEN 1 END) as today_count,
+        COUNT(CASE WHEN prediction_date = CURRENT_DATE AND actual_winner IS NULL THEN 1 END) as today_pending
       FROM prediction_log
       WHERE prediction_date >= CURRENT_DATE - INTERVAL '14 days'
       GROUP BY tournament, COALESCE(tour, 'ATP')
     `)
 
-    // Get current round from prediction_log (count of completed vs pending)
-    // If all predictions are complete, we're waiting on the NEXT round
-    function inferCurrentRound(completed: number, pending: number, drawSize: number): string {
-      if (pending === 0 && completed > 0) {
-        // All predictions completed - show NEXT round (what's being played now)
+    // Map round codes to display names
+    const ROUND_DISPLAY: Record<string, string> = {
+      'F': 'Final',
+      'SF': 'Semifinals',
+      'QF': 'Quarterfinals',
+      'R16': 'Round of 16',
+      'R32': 'Round of 32',
+      'R64': 'Round of 64',
+      'R128': 'Round of 128'
+    }
+
+    // Get current round from prediction_log
+    // Priority: today's round > pending predictions count > completed predictions count
+    function inferCurrentRound(completed: number, pending: number, drawSize: number, todayRound?: string, todayPending?: number): string {
+      // If there are predictions for today, use today's round (most accurate)
+      if (todayRound && ROUND_DISPLAY[todayRound]) {
+        return ROUND_DISPLAY[todayRound]
+      }
+
+      // Fall back to counting pending predictions (today's round wasn't captured)
+      if (pending > 0) {
+        if (pending <= 1) return 'Final'
+        if (pending <= 2) return 'Semifinals'
+        if (pending <= 4) return 'Quarterfinals'
+        if (pending <= 8) return 'Round of 16'
+        if (pending <= 16) return 'Round of 32'
+        return 'Round of 64'
+      }
+
+      // All predictions completed - infer next round from completion count
+      if (completed > 0) {
         if (completed <= 1) return 'Champion' // Final is complete
         if (completed <= 2) return 'Final'     // SF complete, playing Final
         if (completed <= 4) return 'Semifinals' // QF complete, playing SF
@@ -97,12 +127,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         if (completed <= 16) return 'Round of 16'
         return 'Round of 32'
       }
-      // Has pending predictions - that's the current round
-      if (pending <= 1) return 'Final'
-      if (pending <= 2) return 'Semifinals'
-      if (pending <= 4) return 'Quarterfinals'
-      if (pending <= 8) return 'Round of 16'
-      if (pending <= 16) return 'Round of 32'
+
       return 'Round of 64'
     }
 
@@ -114,6 +139,8 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       const metadata = TOURNAMENT_METADATA[name] || TOURNAMENT_METADATA[displayName]
       const completed = parseInt(row.completed_count) || 0
       const pending = parseInt(row.pred_count) - completed
+      const todayRound = row.today_round || undefined
+      const todayPending = parseInt(row.today_pending) || 0
 
       // Determine category based on tour
       let category = metadata?.category || tour
@@ -133,7 +160,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           category,
           tour,  // Use actual tour from prediction_log, not metadata
           status: 'active',
-          round: inferCurrentRound(completed, pending, 96),
+          round: inferCurrentRound(completed, pending, 96, todayRound, todayPending),
           startDate: null,
           endDate: null
         })
