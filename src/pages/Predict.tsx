@@ -48,7 +48,7 @@ export default function Predict() {
           <Link to="/main" className="back-arrow">
             ←
           </Link>
-          <h1 className="predict-title serif">ASHE</h1>
+          <Link to="/main" className="predict-title serif">ASHE</Link>
           <span className="predict-subtitle">Predict</span>
         </header>
         <div className="predict-loading">Loading...</div>
@@ -62,7 +62,7 @@ export default function Predict() {
         <Link to="/main" className="back-arrow">
           ←
         </Link>
-        <h1 className="predict-title serif">ASHE</h1>
+        <Link to="/main" className="predict-title serif">ASHE</Link>
         <span className="predict-subtitle">Predict</span>
       </header>
 

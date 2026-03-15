@@ -53,7 +53,7 @@ export default function Pedigree() {
     return (
       <div className="pedigree-page">
         <header className="pedigree-header">
-          <h1 className="pedigree-wordmark serif">ASHE</h1>
+          <Link to="/main" className="pedigree-wordmark serif">ASHE</Link>
           <p className="pedigree-subtitle">Pedigree</p>
         </header>
         <p className="loading-text">Loading...</p>
@@ -64,7 +64,7 @@ export default function Pedigree() {
   return (
     <div className="pedigree-page">
       <header className="pedigree-header">
-        <h1 className="pedigree-wordmark serif">ASHE</h1>
+        <Link to="/main" className="pedigree-wordmark serif">ASHE</Link>
         <p className="pedigree-subtitle">Pedigree</p>
       </header>
 

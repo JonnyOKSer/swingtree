@@ -118,7 +118,7 @@ export default function Results() {
   return (
     <div className="results-page">
       <header className="results-header">
-        <h1 className="results-wordmark serif">ASHE</h1>
+        <Link to="/main" className="results-wordmark serif">ASHE</Link>
         <p className="results-subtitle">Track Record</p>
       </header>
 

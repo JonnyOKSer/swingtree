@@ -6,7 +6,7 @@ export default function Privacy() {
   return (
     <div className="legal-page">
       <header className="legal-header">
-        <Link to="/" className="legal-wordmark serif">ASHE</Link>
+        <Link to="/main" className="legal-wordmark serif">ASHE</Link>
         <h1>Privacy Policy</h1>
         <p className="legal-updated">Last updated: March 15, 2026</p>
       </header>
