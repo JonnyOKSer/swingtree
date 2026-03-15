@@ -81,6 +81,13 @@
   color: var(--flash-white);
   outline: none;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  caret-color: var(--serengeti-gold);
+  animation: caretBlink 2s step-end infinite;
+}
+
+@keyframes caretBlink {
+  0%, 100% { caret-color: var(--serengeti-gold); }
+  50% { caret-color: transparent; }
 }
 
 .code-input:focus {
