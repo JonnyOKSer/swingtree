@@ -95,11 +95,11 @@
 }
 
 @keyframes placeholderPulse {
-  0% { opacity: 0; }
-  10% { opacity: 0.6; }
+  0% { opacity: 0.6; }
   40% { opacity: 0.6; }
   50% { opacity: 0; }
-  100% { opacity: 0; }
+  90% { opacity: 0; }
+  100% { opacity: 0.6; }
 }
 
 .enter-btn {
