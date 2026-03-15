@@ -81,7 +81,7 @@
   color: var(--flash-white);
   outline: none;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
-  caret-color: var(--serengeti-gold);
+  caret-color: transparent;
 }
 
 .code-input:focus {
