@@ -29,32 +29,47 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     const pool = getPool()
 
     // Get overall results by tour
-    // Filter by actual_winner (not correct) to include all reconciled matches
-    // This ensures matches show up even if 'correct' field wasn't explicitly set
+    // For match wins: exclude SKIP tier, only count PICK and above (STRONG, CONFIDENT, PICK, LEAN)
+    // For first set: include all tiers
+    // Use DISTINCT ON to deduplicate same-day predictions for same matchup
     const overallResult = await pool.query(`
+      WITH deduplicated AS (
+        SELECT DISTINCT ON (prediction_date, LEAST(player_a, player_b), GREATEST(player_a, player_b), tour)
+          id, tour, confidence_tier, correct, predicted_winner, actual_winner,
+          first_set_correct, first_set_score_correct
+        FROM prediction_log
+        WHERE actual_winner IS NOT NULL
+          AND actual_winner NOT LIKE 'VOID%'
+          AND EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+        ORDER BY prediction_date, LEAST(player_a, player_b), GREATEST(player_a, player_b), tour, id
+      )
       SELECT
         COALESCE(tour, 'ATP') as tour,
-        COUNT(*) as total,
-        SUM(CASE WHEN correct = true OR (correct IS NULL AND actual_winner = predicted_winner) THEN 1 ELSE 0 END) as match_wins,
-        SUM(CASE WHEN first_set_correct = true THEN 1 ELSE 0 END) as first_set_wins
-      FROM prediction_log
-      WHERE actual_winner IS NOT NULL
-        AND actual_winner NOT LIKE 'VOID%'
-        AND EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+        COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) as total,
+        SUM(CASE WHEN (correct = true OR (correct IS NULL AND actual_winner = predicted_winner))
+                  AND confidence_tier NOT IN ('SKIP', 'VOID') THEN 1 ELSE 0 END) as match_wins,
+        COUNT(*) as first_set_total,
+        SUM(CASE WHEN first_set_score_correct = true THEN 1 ELSE 0 END) as first_set_wins
+      FROM deduplicated
       GROUP BY COALESCE(tour, 'ATP')
     `)
 
-    // Get results by tier
-    // Filter by actual_winner to include all reconciled matches
+    // Get results by tier (with deduplication)
     const tierResult = await pool.query(`
+      WITH deduplicated AS (
+        SELECT DISTINCT ON (prediction_date, LEAST(player_a, player_b), GREATEST(player_a, player_b), tour)
+          id, confidence_tier, correct, predicted_winner, actual_winner
+        FROM prediction_log
+        WHERE actual_winner IS NOT NULL
+          AND actual_winner NOT LIKE 'VOID%'
+          AND EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+        ORDER BY prediction_date, LEAST(player_a, player_b), GREATEST(player_a, player_b), tour, id
+      )
       SELECT
         confidence_tier,
         COUNT(*) as total,
         SUM(CASE WHEN correct = true OR (correct IS NULL AND actual_winner = predicted_winner) THEN 1 ELSE 0 END) as wins
-      FROM prediction_log
-      WHERE actual_winner IS NOT NULL
-        AND actual_winner NOT LIKE 'VOID%'
-        AND EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+      FROM deduplicated
       GROUP BY confidence_tier
       ORDER BY
         CASE confidence_tier
@@ -79,12 +94,14 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // Process tour results
     for (const row of overallResult.rows) {
       const tour = row.tour === 'WTA' ? wta : atp
-      tour.match.total = parseInt(row.total)
-      tour.match.wins = parseInt(row.match_wins)
+      // Match results: only PICK and above (excludes SKIP)
+      tour.match.total = parseInt(row.total) || 0
+      tour.match.wins = parseInt(row.match_wins) || 0
       tour.match.percentage = tour.match.total > 0
         ? Math.round((tour.match.wins / tour.match.total) * 1000) / 10
         : 0
-      tour.firstSet.total = parseInt(row.total)
+      // First set results: all tiers
+      tour.firstSet.total = parseInt(row.first_set_total) || 0
       tour.firstSet.wins = parseInt(row.first_set_wins) || 0
       tour.firstSet.percentage = tour.firstSet.total > 0
         ? Math.round((tour.firstSet.wins / tour.firstSet.total) * 1000) / 10
@@ -129,6 +146,29 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       combined,
       byTier,
       lastUpdated: new Date().toISOString()
+    }
+
+    // Debug mode: show raw predictions if ?debug=true
+    const queryParams = event.queryStringParameters || {}
+    if (queryParams.debug === 'true') {
+      const debugResult = await pool.query(`
+        SELECT id, prediction_date, tour, tournament, round, player_a, player_b,
+               predicted_winner, actual_winner, confidence_tier, correct
+        FROM prediction_log
+        WHERE actual_winner IS NOT NULL
+          AND EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+        ORDER BY prediction_date DESC, id DESC
+        LIMIT 50
+      `)
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          success: true,
+          results,
+          debug: debugResult.rows
+        })
+      }
     }
 
     return {
