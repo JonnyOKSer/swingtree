@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
 import './SubscriptionModal.css'
 
 interface SubscriptionModalProps {
@@ -9,6 +10,7 @@ interface SubscriptionModalProps {
 interface SubscriptionLimits {
   cap: number
   current: number
+  remaining: number
 }
 
 const TIERS = [
@@ -54,34 +56,115 @@ const TIERS = [
 ]
 
 export default function SubscriptionModal({ onClose, reason = 'voluntary' }: SubscriptionModalProps) {
+  const { user } = useAuth()
   const [limits, setLimits] = useState<SubscriptionLimits | null>(null)
-  const [selectedTier, setSelectedTier] = useState<string | null>(null)
+  const [loading, setLoading] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     // Fetch current subscription limits
     const fetchLimits = async () => {
       try {
-        const response = await fetch('/api/admin-users', {
-          credentials: 'include'
-        })
+        const response = await fetch('/api/subscription-limits')
         if (response.ok) {
           const data = await response.json()
-          setLimits(data.limits)
+          setLimits(data)
         }
       } catch {
-        // Non-admin users won't have access, use default
-        setLimits({ cap: 3000, current: 0 })
+        // Fallback to default
+        setLimits({ cap: 3000, current: 0, remaining: 3000 })
       }
     }
     fetchLimits()
   }, [])
 
-  const handleSubscribe = (tierId: string) => {
-    setSelectedTier(tierId)
-    // For now, show "coming soon" - Stripe integration will come later
+  const handleSubscribe = async (tierId: string) => {
+    setLoading(tierId)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/stripe-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ tier: tierId })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (data.redirect === 'portal') {
+          // User already has subscription, redirect to portal
+          handleManageSubscription()
+          return
+        }
+        setError(data.message || data.error || 'Failed to start checkout')
+        setLoading(null)
+        return
+      }
+
+      // Redirect to Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch (err) {
+      setError('Something went wrong. Please try again.')
+      setLoading(null)
+    }
   }
 
-  const remainingSpots = limits ? limits.cap - limits.current : null
+  const handleManageSubscription = async () => {
+    setLoading('manage')
+    setError(null)
+
+    try {
+      const response = await fetch('/api/stripe-portal', {
+        method: 'POST',
+        credentials: 'include'
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.message || data.error || 'Failed to open billing portal')
+        setLoading(null)
+        return
+      }
+
+      // Redirect to Stripe Portal
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch (err) {
+      setError('Something went wrong. Please try again.')
+      setLoading(null)
+    }
+  }
+
+  const isCapReached = limits && limits.remaining <= 0
+  const isCompUser = user?.status === 'comp'
+  const hasActiveSubscription = user?.status === 'active'
+
+  // Comp users shouldn't see this modal
+  if (isCompUser) {
+    return (
+      <div className="subscription-overlay" onClick={onClose}>
+        <div className="subscription-modal" onClick={e => e.stopPropagation()}>
+          <button className="close-modal" onClick={onClose}>×</button>
+          <div className="modal-header">
+            <h2 className="serif">Complimentary Access</h2>
+            <p className="modal-subtitle">You have full access to ASHE</p>
+          </div>
+          <div className="comp-notice">
+            <p>You have complimentary access to all ASHE features.</p>
+            <button className="subscribe-btn" onClick={onClose}>
+              Continue
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="subscription-overlay" onClick={onClose}>
@@ -107,11 +190,17 @@ export default function SubscriptionModal({ onClose, reason = 'voluntary' }: Sub
           )}
         </div>
 
+        {error && (
+          <div className="subscription-error">
+            <p>{error}</p>
+          </div>
+        )}
+
         <div className="tier-cards">
           {TIERS.map(tier => (
             <div
               key={tier.id}
-              className={`tier-card ${tier.highlighted ? 'highlighted' : ''} ${selectedTier === tier.id ? 'selected' : ''}`}
+              className={`tier-card ${tier.highlighted ? 'highlighted' : ''}`}
             >
               {tier.highlighted && <span className="tier-badge-popular">Most Popular</span>}
               <h3 className="tier-name">{tier.name}</h3>
@@ -127,26 +216,46 @@ export default function SubscriptionModal({ onClose, reason = 'voluntary' }: Sub
               <button
                 className="subscribe-btn"
                 onClick={() => handleSubscribe(tier.id)}
+                disabled={loading !== null || !!isCapReached}
               >
-                {selectedTier === tier.id ? 'Coming Soon' : 'Subscribe'}
+                {loading === tier.id ? (
+                  'Processing...'
+                ) : isCapReached ? (
+                  'Waitlist'
+                ) : hasActiveSubscription ? (
+                  'Switch Plan'
+                ) : (
+                  'Subscribe'
+                )}
               </button>
             </div>
           ))}
         </div>
 
-        {remainingSpots !== null && (
+        {limits && (
           <p className="spots-remaining">
-            <span className="spots-number">{remainingSpots.toLocaleString()}</span> spots remaining
+            {isCapReached ? (
+              <>
+                <span className="spots-number">0</span> spots remaining.{' '}
+                <a href="mailto:support@swingtree.ai?subject=ASHE Waitlist">Join waitlist</a>
+              </>
+            ) : (
+              <>
+                <span className="spots-number">{limits.remaining.toLocaleString()}</span> spots remaining
+              </>
+            )}
           </p>
         )}
 
-        {selectedTier && (
-          <div className="coming-soon-notice">
-            <p>
-              Stripe payment integration coming soon.
-              <br />
-              We'll notify you when subscriptions go live.
-            </p>
+        {hasActiveSubscription && (
+          <div className="manage-subscription">
+            <button
+              className="manage-btn"
+              onClick={handleManageSubscription}
+              disabled={loading !== null}
+            >
+              {loading === 'manage' ? 'Opening...' : 'Manage Current Subscription'}
+            </button>
           </div>
         )}
       </div>

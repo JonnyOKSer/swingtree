@@ -8,8 +8,8 @@ export interface SessionPayload {
   userId: number
   email: string
   name: string | null
-  tier: 'trial' | 'baseline' | 'all_court' | 'tree_top'
-  status: 'trial' | 'active' | 'expired' | 'cancelled' | 'comp'
+  tier: 'trial' | 'baseline' | 'all_court' | 'tree_top' | 'expired'
+  status: 'trial' | 'active' | 'expired' | 'cancelled' | 'comp' | 'past_due'
   trialEnd: string | null
   isAdmin: boolean
 }
@@ -19,8 +19,8 @@ export interface SessionUser {
   id: number
   email: string
   name: string | null
-  tier: 'trial' | 'baseline' | 'all_court' | 'tree_top'
-  status: 'trial' | 'active' | 'expired' | 'cancelled' | 'comp'
+  tier: 'trial' | 'baseline' | 'all_court' | 'tree_top' | 'expired'
+  status: 'trial' | 'active' | 'expired' | 'cancelled' | 'comp' | 'past_due'
   trialEnd: string | null
   isAdmin: boolean
 }
@@ -249,9 +249,10 @@ export function getEffectiveStatus(
   tier: string,
   status: string,
   trialEnd: string | null
-): 'trial' | 'active' | 'expired' | 'cancelled' | 'comp' {
+): 'trial' | 'active' | 'expired' | 'cancelled' | 'comp' | 'past_due' {
   if (status === 'comp') return 'comp'
   if (status === 'active') return 'active'
+  if (status === 'past_due') return 'past_due'
   if (status === 'cancelled') return 'cancelled'
   if (tier === 'trial') {
     if (trialEnd && new Date(trialEnd) < new Date()) {
@@ -259,5 +260,5 @@ export function getEffectiveStatus(
     }
     return 'trial'
   }
-  return status as 'trial' | 'active' | 'expired' | 'cancelled' | 'comp'
+  return status as 'trial' | 'active' | 'expired' | 'cancelled' | 'comp' | 'past_due'
 }

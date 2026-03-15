@@ -6,8 +6,8 @@ export interface User {
   id: number
   email: string
   name: string | null
-  tier: 'trial' | 'baseline' | 'all_court' | 'tree_top'
-  status: 'trial' | 'active' | 'expired' | 'cancelled' | 'comp'
+  tier: 'trial' | 'baseline' | 'all_court' | 'tree_top' | 'expired'
+  status: 'trial' | 'active' | 'expired' | 'cancelled' | 'comp' | 'past_due'
   trialEnd: string | null
   isAdmin: boolean
 }
@@ -29,6 +29,9 @@ export interface AuthContextType {
   loading: boolean
   isAuthenticated: boolean
   isTrialExpired: boolean
+  hasActiveSubscription: boolean
+  isSubscriptionPastDue: boolean
+  isCompUser: boolean
   tierAccess: TierAccess
   logout: () => Promise<void>
   checkSession: () => Promise<void>
@@ -148,11 +151,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return TIER_ACCESS[user.tier] || EXPIRED_ACCESS
   })()
 
+  // Subscription status helpers
+  const hasActiveSubscription = user?.status === 'active' || user?.status === 'comp'
+  const isSubscriptionPastDue = user?.status === 'past_due'
+  const isCompUser = user?.status === 'comp'
+
   const value: AuthContextType = {
     user,
     loading,
     isAuthenticated: user !== null,
     isTrialExpired,
+    hasActiveSubscription,
+    isSubscriptionPastDue,
+    isCompUser,
     tierAccess,
     logout,
     checkSession
