@@ -1,4 +1,3 @@
-import type { Config, Context } from '@netlify/functions'
 import { getPool } from './db.js'
 
 /**
@@ -107,7 +106,7 @@ async function fetchCompletedMatches(tour: 'ATP' | 'WTA'): Promise<CompletedMatc
   }
 }
 
-export default async function handler(_request: Request, _context: Context) {
+export default async function handler() {
   const startTime = Date.now()
   console.log(`[AUTO-RECONCILE] Starting at ${new Date().toISOString()}`)
 
@@ -126,13 +125,16 @@ export default async function handler(_request: Request, _context: Context) {
 
     if (unreconciledResult.rows.length === 0) {
       console.log('[AUTO-RECONCILE] No unreconciled predictions, exiting')
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'No unreconciled predictions',
-        checked: 0,
-        updated: 0,
-        duration: Date.now() - startTime
-      }), { headers: { 'Content-Type': 'application/json' } })
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          success: true,
+          message: 'No unreconciled predictions',
+          checked: 0,
+          updated: 0,
+          duration: Date.now() - startTime
+        })
+      }
     }
 
     console.log(`[AUTO-RECONCILE] Found ${unreconciledResult.rows.length} unreconciled predictions`)
@@ -146,20 +148,22 @@ export default async function handler(_request: Request, _context: Context) {
 
     if (allMatches.length === 0) {
       console.log('[AUTO-RECONCILE] No completed matches from ESPN, exiting')
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'No completed matches from ESPN',
-        checked: unreconciledResult.rows.length,
-        updated: 0,
-        duration: Date.now() - startTime
-      }), { headers: { 'Content-Type': 'application/json' } })
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          success: true,
+          message: 'No completed matches from ESPN',
+          checked: unreconciledResult.rows.length,
+          updated: 0,
+          duration: Date.now() - startTime
+        })
+      }
     }
 
     // Match predictions to results
     let updated = 0
     for (const pred of unreconciledResult.rows) {
       const matchingResult = allMatches.find(m => {
-        // Tournament name matching
         const tournamentMatch =
           m.tournament.toLowerCase().includes(pred.tournament.toLowerCase()) ||
           pred.tournament.toLowerCase().includes(m.tournament.toLowerCase()) ||
@@ -195,24 +199,30 @@ export default async function handler(_request: Request, _context: Context) {
     const duration = Date.now() - startTime
     console.log(`[AUTO-RECONCILE] Complete: ${updated}/${unreconciledResult.rows.length} reconciled in ${duration}ms`)
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Reconciled ${updated} of ${unreconciledResult.rows.length} predictions`,
-      checked: unreconciledResult.rows.length,
-      updated,
-      duration
-    }), { headers: { 'Content-Type': 'application/json' } })
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        success: true,
+        message: `Reconciled ${updated} of ${unreconciledResult.rows.length} predictions`,
+        checked: unreconciledResult.rows.length,
+        updated,
+        duration
+      })
+    }
 
   } catch (error) {
     console.error('[AUTO-RECONCILE] Error:', error)
-    return new Response(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
   }
 }
 
 // Netlify scheduled function config - runs every 10 minutes
-export const config: Config = {
+export const config = {
   schedule: '*/10 * * * *'
 }
