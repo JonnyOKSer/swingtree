@@ -1,2 +1,5 @@
+# API routes - must come BEFORE SPA fallback
+/api/*  /.netlify/functions/:splat  200
+
 # SPA fallback for production (Vite copies this to dist)
 /*    /index.html   200
