@@ -52,6 +52,9 @@ export default function Admin() {
     matches?: { atp: number; wta: number }
   } | null>(null)
 
+  // User search filter
+  const [userSearch, setUserSearch] = useState('')
+
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       navigate('/')
@@ -306,7 +309,17 @@ export default function Admin() {
 
       {/* Users Table */}
       <section className="admin-section users-section">
-        <h2>Users ({users.length})</h2>
+        <div className="users-header">
+          <h2>Users ({users.length})</h2>
+          <div className="users-search">
+            <input
+              type="text"
+              placeholder="Search by email or name..."
+              value={userSearch}
+              onChange={e => setUserSearch(e.target.value)}
+            />
+          </div>
+        </div>
         {loadingUsers ? (
           <p>Loading users...</p>
         ) : (
@@ -324,7 +337,16 @@ export default function Admin() {
                 </tr>
               </thead>
               <tbody>
-                {users.map(u => (
+                {users
+                  .filter(u => {
+                    if (!userSearch) return true
+                    const search = userSearch.toLowerCase()
+                    return (
+                      u.email.toLowerCase().includes(search) ||
+                      (u.name && u.name.toLowerCase().includes(search))
+                    )
+                  })
+                  .map(u => (
                   <tr key={u.id} className={u.isAdmin ? 'admin-row' : ''}>
                     <td>{u.email} {u.isAdmin && <span className="admin-badge">Admin</span>}</td>
                     <td>{u.name || '-'}</td>
