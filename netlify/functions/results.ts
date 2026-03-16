@@ -9,6 +9,7 @@ interface TourResults {
 interface TournamentResults {
   tournament: string
   tour: string
+  year: number
   match: { wins: number; total: number; percentage: number }
   firstSet: { wins: number; total: number; percentage: number }
 }
@@ -142,6 +143,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       SELECT
         tournament,
         COALESCE(tour, 'ATP') as tour,
+        EXTRACT(YEAR FROM MIN(prediction_date))::int as year,
         COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) as match_total,
         SUM(CASE WHEN (correct = true OR (correct IS NULL AND actual_winner = predicted_winner))
                   AND confidence_tier NOT IN ('SKIP', 'VOID') THEN 1 ELSE 0 END) as match_wins,
@@ -221,6 +223,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       return {
         tournament: row.tournament,
         tour: row.tour,
+        year: parseInt(row.year) || new Date().getFullYear(),
         match: {
           total: matchTotal,
           wins: matchWins,

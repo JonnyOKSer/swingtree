@@ -51,6 +51,7 @@ interface TourResults {
 interface TournamentResults {
   tournament: string
   tour: string
+  year: number
   match: { wins: number; total: number; percentage: number }
   firstSet: { wins: number; total: number; percentage: number }
 }
@@ -107,7 +108,7 @@ function TournamentRow({ tournament }: { tournament: TournamentResults }) {
     <div className="tournament-row">
       <div className="tournament-info">
         <span className="tournament-name">{tournament.tournament}</span>
-        <span className="tournament-tour">{tournament.tour}</span>
+        <span className="tournament-tour">{tournament.tour} {tournament.year}</span>
       </div>
       <div className="tournament-stats">
         <div className="tournament-stat">
