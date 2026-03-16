@@ -65,24 +65,25 @@ async function fetchESPNCompletedMatches(tour: 'ATP' | 'WTA'): Promise<Map<strin
   return results
 }
 
-function extractFirstSetScore(score: string, winner: string, loser: string): { fsWinner: string | null; fsScore: string | null } {
-  if (!score) return { fsWinner: null, fsScore: null }
+function extractFirstSetScore(score: string, winner: string, loser: string): { fsWinner: string | null; fsScore: string | null; fsTotalGames: number | null } {
+  if (!score) return { fsWinner: null, fsScore: null, fsTotalGames: null }
 
   const firstSet = score.split(' ')[0] || ''
-  if (!firstSet.includes('-')) return { fsWinner: null, fsScore: null }
+  if (!firstSet.includes('-')) return { fsWinner: null, fsScore: null, fsTotalGames: null }
 
   const clean = firstSet.replace(/[()]/g, '')
   const parts = clean.split('-')
-  if (parts.length < 2) return { fsWinner: null, fsScore: null }
+  if (parts.length < 2) return { fsWinner: null, fsScore: null, fsTotalGames: null }
 
   try {
     const wGames = parseInt(parts[0][0])
     const lGames = parseInt(parts[1][0])
     const fsWinner = wGames > lGames ? winner : loser
     const fsScore = `${Math.max(wGames, lGames)}-${Math.min(wGames, lGames)}`
-    return { fsWinner, fsScore }
+    const fsTotalGames = wGames + lGames
+    return { fsWinner, fsScore, fsTotalGames }
   } catch {
-    return { fsWinner: null, fsScore: null }
+    return { fsWinner: null, fsScore: null, fsTotalGames: null }
   }
 }
 
@@ -108,7 +109,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     // Get unreconciled predictions
     const pendingResult = await pool.query(`
-      SELECT id, player_a, player_b, predicted_winner, first_set_winner, first_set_score, prediction_date
+      SELECT id, player_a, player_b, predicted_winner, first_set_winner, first_set_score, prediction_date, first_set_over_9_5_prob
       FROM prediction_log
       WHERE prediction_date >= $1
         AND reconciled_at IS NULL
@@ -127,9 +128,17 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
       if (result) {
         const isCorrect = pred.predicted_winner === result.winner
-        const { fsWinner, fsScore } = extractFirstSetScore(result.score, result.winner, result.loser)
+        const { fsWinner, fsScore, fsTotalGames } = extractFirstSetScore(result.score, result.winner, result.loser)
         const fsWinnerCorrect = fsWinner ? pred.first_set_winner === fsWinner : null
         const fsScoreCorrect = fsScore && pred.first_set_score ? pred.first_set_score === fsScore : null
+
+        // Calculate O/U 9.5 correctness
+        let fsOver95Correct: boolean | null = null
+        if (fsTotalGames !== null && pred.first_set_over_9_5_prob !== null) {
+          const actualOver = fsTotalGames > 9  // Over 9.5 means 10+ games
+          const predictedOver = pred.first_set_over_9_5_prob > 0.5
+          fsOver95Correct = actualOver === predictedOver
+        }
 
         await pool.query(`
           UPDATE prediction_log
@@ -139,9 +148,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
               correct = $4,
               first_set_correct = $5,
               first_set_score_correct = $6,
+              first_set_over_9_5_correct = $7,
               reconciled_at = NOW()
-          WHERE id = $7
-        `, [result.winner, fsWinner, fsScore, isCorrect, fsWinnerCorrect, fsScoreCorrect, pred.id])
+          WHERE id = $8
+        `, [result.winner, fsWinner, fsScore, isCorrect, fsWinnerCorrect, fsScoreCorrect, fsOver95Correct, pred.id])
 
         reconciled++
         if (isCorrect) correct++
