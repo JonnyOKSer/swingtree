@@ -42,13 +42,9 @@
   pointer-events: none;
 }
 
-/* Tournament panel */
+/* Tournament panel - base positioning */
 .tournament-panel {
   position: absolute;
-  width: 300px;
-  background: #252530;
-  border: 1px solid #4a4a4a;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   z-index: 100;
   animation: panelSlideIn 0.2s ease-out;
 }
@@ -308,8 +304,12 @@
   width: 320px;
   border-radius: 6px;
   border: 1px solid rgba(120, 112, 104, 0.3);
-  background: rgba(37, 37, 48, 0.98);
-  backdrop-filter: blur(8px);
+  background: #252530;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.tournament-list {
+  background: #252530;
 }
 
 .panel-header {
