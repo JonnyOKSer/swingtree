@@ -212,13 +212,21 @@
   border: 1px solid rgba(196, 151, 59, 0.3);
 }
 
-/* Tour-specific item highlighting */
+/* Tour-specific item highlighting - WTA gets pink accent */
 .tournament-item.tour-wta .live-indicator {
   background: #d45b9a;
 }
 
 .tournament-item.tour-wta .round {
   color: #d45b9a;
+}
+
+.tournament-item.tour-wta .tournament-name {
+  color: #e86ba8;
+}
+
+.tournament-item.tour-wta:hover .tournament-name {
+  color: #f07db8;
 }
 
 /* ============================================
