@@ -95,42 +95,11 @@
   color: var(--flash-white);
 }
 
-.tournament-list {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.tournament-item {
-  padding: 14px 16px;
-  border-bottom: 1px solid #3a3a3a;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.tournament-item:last-child {
-  border-bottom: none;
-}
-
-.tournament-item:hover {
-  background: #303040;
-}
-
 .tournament-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin-bottom: 8px;
-}
-
-.tournament-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--flash-white);
-}
-
-.tournament-meta {
-  font-size: 12px;
-  color: var(--ash-grey);
 }
 
 .tournament-status {
@@ -248,10 +217,6 @@
   background: #d45b9a;
 }
 
-.tournament-item.tour-wta.active .tournament-name {
-  color: #d45b9a;
-}
-
 .tournament-item.tour-wta .round {
   color: #d45b9a;
 }
@@ -329,99 +294,122 @@
 }
 
 /* ============================================
-   Improved Desktop Tournament Panel
+   Improved Tournament Panel (all sizes)
    ============================================ */
+.tournament-panel {
+  width: 320px;
+  border-radius: 6px;
+  border: 1px solid rgba(120, 112, 104, 0.3);
+  background: rgba(37, 37, 48, 0.98);
+  backdrop-filter: blur(8px);
+}
+
+.panel-header {
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(120, 112, 104, 0.2);
+}
+
+.panel-header h3 {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #C8C0B0;
+}
+
+.tournament-list {
+  max-height: 340px;
+  padding: 4px 0;
+}
+
+.tournament-item {
+  padding: 14px 18px;
+  margin: 0 6px;
+  border-radius: 4px;
+  border-bottom: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.tournament-item:last-child {
+  border-bottom: none;
+}
+
+.tournament-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tournament-item + .tournament-item {
+  border-top: 1px solid rgba(120, 112, 104, 0.1);
+}
+
+.tournament-name {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  color: var(--flash-white);
+}
+
+.tournament-meta {
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  color: #787068;
+  margin-top: 2px;
+}
+
+.tournament-status {
+  margin-top: 4px;
+}
+
+.round {
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.days-until {
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  color: #787068;
+}
+
+.tour-badge {
+  font-size: 10px;
+  padding: 3px 6px;
+}
+
+.close-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: 18px;
+  color: #787068;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.close-btn:hover {
+  background: rgba(120, 112, 104, 0.15);
+  color: #C8C0B0;
+}
+
+/* Larger screens - wider panel */
 @media (min-width: 769px) {
   .tournament-panel {
-    width: 340px;
-    border-radius: 6px;
-    border: 1px solid rgba(120, 112, 104, 0.3);
-    background: rgba(37, 37, 48, 0.98);
-    backdrop-filter: blur(8px);
-  }
-
-  .panel-header {
-    padding: 18px 20px;
-    border-bottom: 1px solid rgba(120, 112, 104, 0.2);
+    width: 360px;
   }
 
   .panel-header h3 {
     font-size: 15px;
-    font-weight: 500;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: #C8C0B0;
-  }
-
-  .tournament-list {
-    max-height: 360px;
-    padding: 4px 0;
   }
 
   .tournament-item {
     padding: 16px 20px;
-    margin: 0 8px;
-    border-radius: 4px;
-    border-bottom: none;
-    transition: background 0.2s ease, transform 0.15s ease;
-  }
-
-  .tournament-item:hover {
-    background: rgba(196, 151, 59, 0.08);
-    transform: translateX(2px);
-  }
-
-  .tournament-item + .tournament-item {
-    border-top: 1px solid rgba(120, 112, 104, 0.1);
   }
 
   .tournament-name {
     font-size: 15px;
-    font-weight: 500;
-    letter-spacing: 0.5px;
-  }
-
-  .tournament-meta {
-    font-size: 12px;
-    letter-spacing: 0.5px;
-    color: #787068;
-    margin-top: 2px;
-  }
-
-  .tournament-status {
-    margin-top: 4px;
-  }
-
-  .round {
-    font-size: 13px;
-    letter-spacing: 1.5px;
-  }
-
-  .days-until {
-    font-size: 12px;
-    letter-spacing: 0.5px;
-    color: #787068;
-  }
-
-  .tour-badge {
-    font-size: 10px;
-    padding: 3px 6px;
-  }
-
-  .close-btn {
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    font-size: 20px;
-    color: #787068;
-    transition: background 0.2s ease, color 0.2s ease;
-  }
-
-  .close-btn:hover {
-    background: rgba(120, 112, 104, 0.15);
-    color: #C8C0B0;
   }
 }
