@@ -192,37 +192,37 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
       for (const row of tournamentsTableResult.rows) {
         const name = row.name
-        const tour = row.tour || 'ATP'
+        const dbTour = row.tour || 'ATP'
 
-        // For combined events (ATP/WTA), check if EITHER tour is already active
-        // If so, skip adding the "upcoming" entry
-        if (tour === 'ATP/WTA') {
-          const atpKey = getCanonicalKey(name, 'ATP')
-          const wtaKey = getCanonicalKey(name, 'WTA')
-          // Skip if either ATP or WTA draw is already active
-          if (tournamentMap.has(atpKey) || tournamentMap.has(wtaKey)) {
-            continue
+        // For combined events (ATP/WTA), add TWO separate entries
+        const toursToAdd = dbTour === 'ATP/WTA' ? ['ATP', 'WTA'] : [dbTour]
+
+        for (const tour of toursToAdd) {
+          const canonicalKey = getCanonicalKey(name, tour)
+
+          // Only add if not already present (active tournaments take precedence)
+          if (!tournamentMap.has(canonicalKey)) {
+            // Adjust category for WTA (e.g., "ATP 1000" -> "WTA 1000")
+            let category = row.category || tour
+            if (tour === 'WTA' && category.startsWith('ATP')) {
+              category = category.replace('ATP', 'WTA')
+            }
+
+            tournamentMap.set(canonicalKey, {
+              id: row.slug ? `${row.slug}-${tour.toLowerCase()}` : canonicalKey,
+              name,
+              country: row.country || 'Unknown',
+              countryCode: row.country_code || 'UNK',
+              city: row.city || name,
+              surface: row.surface || 'Hard',
+              category,
+              tour,
+              status: 'upcoming',
+              round: null,
+              startDate: null,
+              endDate: null
+            })
           }
-        }
-
-        const canonicalKey = getCanonicalKey(name, tour)
-
-        // Only add if not already present (active tournaments take precedence)
-        if (!tournamentMap.has(canonicalKey)) {
-          tournamentMap.set(canonicalKey, {
-            id: row.slug || canonicalKey,
-            name,
-            country: row.country || 'Unknown',
-            countryCode: row.country_code || 'UNK',
-            city: row.city || name,
-            surface: row.surface || 'Hard',
-            category: row.category || tour,
-            tour,
-            status: 'upcoming',
-            round: null,
-            startDate: null,
-            endDate: null
-          })
         }
       }
     } catch {
