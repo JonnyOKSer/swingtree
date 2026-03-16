@@ -170,7 +170,8 @@
   color: var(--ash-grey);
 }
 
-.tournament-item.active .tournament-name {
+/* Active tournaments get subtle highlight on hover only */
+.tournament-item.active:hover .tournament-name {
   color: var(--serengeti-gold);
 }
 
