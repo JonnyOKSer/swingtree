@@ -30,6 +30,8 @@ export default function Admin() {
   const [limits, setLimits] = useState<{ cap: number; current: number } | null>(null)
   const [loadingUsers, setLoadingUsers] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [systemHealth, setSystemHealth] = useState<{ railway: 'online' | 'offline' | 'checking' }>({ railway: 'checking' })
 
   // Code generation form
   const [intendedFor, setIntendedFor] = useState('')
@@ -75,8 +77,30 @@ export default function Admin() {
   useEffect(() => {
     if (user?.isAdmin) {
       fetchUsers()
+      checkSystemHealth()
     }
   }, [user])
+
+  const checkSystemHealth = async () => {
+    setSystemHealth(prev => ({ ...prev, railway: 'checking' }))
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 5000)
+      const response = await fetch('https://agent-production-765b.up.railway.app/health', {
+        signal: controller.signal
+      })
+      clearTimeout(timeout)
+      setSystemHealth({ railway: response.ok ? 'online' : 'offline' })
+    } catch {
+      setSystemHealth({ railway: 'offline' })
+    }
+  }
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await Promise.all([fetchUsers(), checkSystemHealth()])
+    setRefreshing(false)
+  }
 
   const fetchUsers = async () => {
     try {
@@ -249,19 +273,32 @@ export default function Admin() {
 
       {/* Stats */}
       {limits && (
-        <div className="admin-stats">
-          <div className="stat-box">
-            <span className="stat-value">{limits.current}</span>
-            <span className="stat-label">Users</span>
+        <div className="admin-stats-row">
+          <div className="admin-stats">
+            <div className="stat-box">
+              <span className="stat-value">{limits.current}</span>
+              <span className="stat-label">Users</span>
+            </div>
+            <div className="stat-box">
+              <span className="stat-value">{limits.cap - limits.current} / {limits.cap}</span>
+              <span className="stat-label">Spots Available</span>
+            </div>
+            <div className="stat-box health-box">
+              <span className={`health-indicator ${systemHealth.railway}`}>
+                <span className="health-dot"></span>
+                {systemHealth.railway === 'checking' ? 'Checking...' : systemHealth.railway === 'online' ? 'Railway Online' : 'Railway Offline'}
+              </span>
+              <span className="stat-label">System Health</span>
+            </div>
           </div>
-          <div className="stat-box">
-            <span className="stat-value">{limits.cap - limits.current}</span>
-            <span className="stat-label">Spots Left</span>
-          </div>
-          <div className="stat-box">
-            <span className="stat-value">{limits.cap}</span>
-            <span className="stat-label">Total Cap</span>
-          </div>
+          <button
+            className="refresh-btn"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Refresh stats"
+          >
+            {refreshing ? '↻' : '⟳'}
+          </button>
         </div>
       )}
 
