@@ -281,6 +281,18 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         FROM ranked WHERE rn = 1
         ORDER BY prediction_date DESC, id DESC
       `)
+      // Tournament debug: show distinct tournaments and their null status
+      const tournamentDebug = await pool.query(`
+        SELECT
+          tournament,
+          COUNT(*) as total_predictions,
+          COUNT(*) FILTER (WHERE actual_winner IS NOT NULL) as reconciled,
+          COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) as non_skip
+        FROM prediction_log
+        WHERE EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+        GROUP BY tournament
+        ORDER BY total_predictions DESC
+      `)
       return {
         statusCode: 200,
         headers,
@@ -291,7 +303,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
             raw: rawResult.rows,
             deduplicated: dedupedResult.rows,
             rawCount: rawResult.rows.length,
-            dedupedCount: dedupedResult.rows.length
+            dedupedCount: dedupedResult.rows.length,
+            tournaments: tournamentDebug.rows,
+            tournamentResultRows: tournamentResult.rows.length,
+            byTournamentLength: byTournament.length
           }
         })
       }
