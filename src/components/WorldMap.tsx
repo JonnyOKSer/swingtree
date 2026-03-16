@@ -197,9 +197,24 @@ export default function WorldMap({ onTournamentSelect }: WorldMapProps) {
     return diff
   }
 
+  // Track if user has ever selected a country this session
+  const [hasInteracted, setHasInteracted] = useState(false)
+
+  // Update hasInteracted when a country is selected
+  useEffect(() => {
+    if (selectedCountry) {
+      setHasInteracted(true)
+    }
+  }, [selectedCountry])
+
   return (
     <div className="world-map-container" ref={containerRef}>
       <svg ref={svgRef} className="world-map" />
+
+      {/* Instruction overlay - shows when no country selected and user hasn't interacted */}
+      <div className={`map-instruction-overlay ${selectedCountry || hasInteracted ? 'hidden' : ''}`}>
+        <span className="instruction-text">Select a country to explore active tournaments</span>
+      </div>
 
       {/* Tournament panel */}
       {selectedCountry && countryTournaments.length > 0 && (
