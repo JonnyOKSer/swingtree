@@ -45,6 +45,132 @@
   letter-spacing: 1px;
 }
 
+/* Tab Navigation */
+.results-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 32px;
+  border: 1px solid var(--ash-grey);
+  max-width: 400px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 14px 24px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ash-grey);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  color: var(--flash-white);
+  background: var(--charcoal-light);
+}
+
+.tab-btn.active {
+  color: var(--charcoal);
+  background: var(--serengeti-gold);
+}
+
+/* Tournament List */
+.tournament-list {
+  width: 100%;
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--ash-grey);
+  border: 1px solid var(--ash-grey);
+}
+
+.tournament-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: var(--charcoal);
+  transition: background 0.2s ease;
+}
+
+.tournament-row:hover {
+  background: var(--charcoal-light);
+}
+
+.tournament-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tournament-name {
+  font-size: 14px;
+  color: var(--flash-white);
+  letter-spacing: 0.5px;
+}
+
+.tournament-tour {
+  font-size: 11px;
+  color: var(--ash-grey);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.tournament-stats {
+  display: flex;
+  gap: 32px;
+}
+
+.tournament-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.stat-label {
+  font-size: 10px;
+  color: var(--ash-grey);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 13px;
+  color: var(--flash-white);
+}
+
+.stat-pct {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.stat-pct.good {
+  color: var(--serengeti-gold);
+}
+
+.stat-pct.ok {
+  color: var(--flash-white);
+}
+
+.stat-pct.bad {
+  color: var(--ash-grey);
+}
+
+.no-tournaments {
+  padding: 48px;
+  text-align: center;
+  color: var(--ash-grey);
+  background: var(--charcoal);
+  letter-spacing: 1px;
+}
+
 .results-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -265,6 +391,32 @@
 
   .results-page {
     padding: 24px;
+  }
+
+  .results-tabs {
+    max-width: 100%;
+  }
+
+  .tab-btn {
+    padding: 12px 16px;
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  .tournament-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 20px;
+  }
+
+  .tournament-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .tournament-stat {
+    align-items: flex-start;
   }
 
   .faq-section {

@@ -48,9 +48,17 @@ interface TourResults {
   firstSet: { wins: number; total: number; percentage: number }
 }
 
+interface TournamentResults {
+  tournament: string
+  tour: string
+  match: { wins: number; total: number; percentage: number }
+  firstSet: { wins: number; total: number; percentage: number }
+}
+
 interface ResultsData {
   atp: TourResults
   wta: TourResults
+  byTournament?: TournamentResults[]
 }
 
 // Fallback data when API is unavailable
@@ -91,10 +99,47 @@ function ResultBox({
   )
 }
 
+function TournamentRow({ tournament }: { tournament: TournamentResults }) {
+  const matchPct = tournament.match.percentage
+  const fsPct = tournament.firstSet.percentage
+
+  return (
+    <div className="tournament-row">
+      <div className="tournament-info">
+        <span className="tournament-name">{tournament.tournament}</span>
+        <span className="tournament-tour">{tournament.tour}</span>
+      </div>
+      <div className="tournament-stats">
+        <div className="tournament-stat">
+          <span className="stat-label">Match</span>
+          <span className="stat-value mono">
+            {tournament.match.wins}/{tournament.match.total}
+          </span>
+          <span className={`stat-pct mono ${matchPct >= 60 ? 'good' : matchPct >= 50 ? 'ok' : 'bad'}`}>
+            {matchPct}%
+          </span>
+        </div>
+        <div className="tournament-stat">
+          <span className="stat-label">1st Set</span>
+          <span className="stat-value mono">
+            {tournament.firstSet.wins}/{tournament.firstSet.total}
+          </span>
+          <span className={`stat-pct mono ${fsPct >= 30 ? 'good' : fsPct >= 20 ? 'ok' : 'bad'}`}>
+            {fsPct}%
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+type TabView = 'overall' | 'tournament'
+
 export default function Results() {
   const isAuthenticated = sessionStorage.getItem('ashe-authenticated') === 'true'
   const [results, setResults] = useState<ResultsData>(FALLBACK_RESULTS)
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<TabView>('overall')
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -122,38 +167,64 @@ export default function Results() {
         <p className="results-subtitle">Track Record</p>
       </header>
 
+      <div className="results-tabs">
+        <button
+          className={`tab-btn ${activeTab === 'overall' ? 'active' : ''}`}
+          onClick={() => setActiveTab('overall')}
+        >
+          Overall
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'tournament' ? 'active' : ''}`}
+          onClick={() => setActiveTab('tournament')}
+        >
+          By Tournament
+        </button>
+      </div>
+
       {loading ? (
         <div className="results-loading">
           <p>Loading results...</p>
         </div>
+      ) : activeTab === 'overall' ? (
+        <>
+          <div className="results-grid">
+            <ResultBox
+              label="ATP MATCH"
+              wins={results.atp.match.wins}
+              total={results.atp.match.total}
+            />
+            <ResultBox
+              label="ATP 1ST SET"
+              wins={results.atp.firstSet.wins}
+              total={results.atp.firstSet.total}
+            />
+            <ResultBox
+              label="WTA MATCH"
+              wins={results.wta.match.wins}
+              total={results.wta.match.total}
+            />
+            <ResultBox
+              label="WTA 1ST SET"
+              wins={results.wta.firstSet.wins}
+              total={results.wta.firstSet.total}
+            />
+          </div>
+          <p className="results-note">
+            Activation Date: March 13 2026. Match Records include Strong, Confident, Pick Tier Predictions while 1st Set Stats include All Prediction Tiers + Recommended Skips.
+          </p>
+        </>
       ) : (
-        <div className="results-grid">
-          <ResultBox
-            label="ATP MATCH"
-            wins={results.atp.match.wins}
-            total={results.atp.match.total}
-          />
-          <ResultBox
-            label="ATP 1ST SET"
-            wins={results.atp.firstSet.wins}
-            total={results.atp.firstSet.total}
-          />
-          <ResultBox
-            label="WTA MATCH"
-            wins={results.wta.match.wins}
-            total={results.wta.match.total}
-          />
-          <ResultBox
-            label="WTA 1ST SET"
-            wins={results.wta.firstSet.wins}
-            total={results.wta.firstSet.total}
-          />
+        <div className="tournament-list">
+          {results.byTournament && results.byTournament.length > 0 ? (
+            results.byTournament.map((t, i) => (
+              <TournamentRow key={`${t.tournament}-${t.tour}-${i}`} tournament={t} />
+            ))
+          ) : (
+            <p className="no-tournaments">No tournament data available yet.</p>
+          )}
         </div>
       )}
-
-      <p className="results-note">
-        Activation Date: March 13 2026. Match Records include Strong, Confident, Pick Tier Predictions while 1st Set Stats include All Prediction Tiers + Recommended Skips.
-      </p>
 
       <section className="faq-section">
         <h2 className="faq-title">FAQ</h2>

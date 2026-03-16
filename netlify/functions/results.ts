@@ -6,11 +6,19 @@ interface TourResults {
   firstSet: { wins: number; total: number; percentage: number }
 }
 
+interface TournamentResults {
+  tournament: string
+  tour: string
+  match: { wins: number; total: number; percentage: number }
+  firstSet: { wins: number; total: number; percentage: number }
+}
+
 interface ResultsData {
   atp: TourResults
   wta: TourResults
   combined: TourResults
   byTier: Record<string, { wins: number; total: number; percentage: number }>
+  byTournament: TournamentResults[]
   lastUpdated: string
 }
 
@@ -107,6 +115,44 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         END
     `)
 
+    // Get results by tournament (with deduplication)
+    const tournamentResult = await pool.query(`
+      WITH ranked AS (
+        SELECT *,
+          ROW_NUMBER() OVER (
+            PARTITION BY LOWER(tournament), round, LEAST(LOWER(player_a), LOWER(player_b)), GREATEST(LOWER(player_a), LOWER(player_b)), tour
+            ORDER BY
+              CASE confidence_tier
+                WHEN 'STRONG' THEN 1
+                WHEN 'CONFIDENT' THEN 2
+                WHEN 'PICK' THEN 3
+                WHEN 'LEAN' THEN 4
+                ELSE 5
+              END,
+              prediction_date DESC
+          ) as rn
+        FROM prediction_log
+        WHERE actual_winner IS NOT NULL
+          AND actual_winner NOT LIKE 'VOID%'
+          AND EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+      ),
+      deduplicated AS (
+        SELECT * FROM ranked WHERE rn = 1
+      )
+      SELECT
+        tournament,
+        COALESCE(tour, 'ATP') as tour,
+        COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) as match_total,
+        SUM(CASE WHEN (correct = true OR (correct IS NULL AND actual_winner = predicted_winner))
+                  AND confidence_tier NOT IN ('SKIP', 'VOID') THEN 1 ELSE 0 END) as match_wins,
+        COUNT(*) as first_set_total,
+        SUM(CASE WHEN first_set_score_correct = true THEN 1 ELSE 0 END) as first_set_wins
+      FROM deduplicated
+      GROUP BY tournament, COALESCE(tour, 'ATP')
+      HAVING COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) > 0
+      ORDER BY COUNT(*) DESC
+    `)
+
     // Initialize results
     const atp: TourResults = {
       match: { wins: 0, total: 0, percentage: 0 },
@@ -166,11 +212,34 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       }
     }
 
+    // Process tournament results
+    const byTournament: TournamentResults[] = tournamentResult.rows.map(row => {
+      const matchTotal = parseInt(row.match_total) || 0
+      const matchWins = parseInt(row.match_wins) || 0
+      const fsTotal = parseInt(row.first_set_total) || 0
+      const fsWins = parseInt(row.first_set_wins) || 0
+      return {
+        tournament: row.tournament,
+        tour: row.tour,
+        match: {
+          total: matchTotal,
+          wins: matchWins,
+          percentage: matchTotal > 0 ? Math.round((matchWins / matchTotal) * 1000) / 10 : 0
+        },
+        firstSet: {
+          total: fsTotal,
+          wins: fsWins,
+          percentage: fsTotal > 0 ? Math.round((fsWins / fsTotal) * 1000) / 10 : 0
+        }
+      }
+    })
+
     const results: ResultsData = {
       atp,
       wta,
       combined,
       byTier,
+      byTournament,
       lastUpdated: new Date().toISOString()
     }
 
