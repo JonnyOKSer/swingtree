@@ -166,6 +166,46 @@
   .admin-grid {
     grid-template-columns: 1fr;
   }
+
+  .admin-stats-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-stats {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .stat-box {
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: left;
+  }
+
+  .stat-value {
+    font-size: 24px;
+    order: 2;
+  }
+
+  .stat-label {
+    order: 1;
+  }
+
+  .health-box {
+    min-width: auto;
+  }
+
+  .health-indicator {
+    font-size: 13px;
+  }
+
+  .refresh-btn {
+    width: 100%;
+    padding: 14px;
+  }
 }
 
 /* Sections */
