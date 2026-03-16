@@ -1,17 +1,12 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
 import { getPool } from './db'
 
-/**
- * Auto-Reconcile Scheduled Function
- *
- * Runs every 10 minutes to reconcile predictions with actual results.
- * This provides more frequent reconciliation than the Railway cron (which runs 3x daily).
- *
- * Schedule: Every 10 minutes
- * Configure in netlify.toml:
- *   [functions."auto-reconcile"]
- *   schedule = "*/10 * * * *"
- */
+// Auto-Reconcile Scheduled Function
+//
+// Runs every 10 minutes to reconcile predictions with actual results.
+// This provides more frequent reconciliation than the Railway cron (which runs 3x daily).
+//
+// Schedule: Every 10 minutes (configured in netlify.toml)
 
 interface ReconciliationResult {
   reconciled: number
