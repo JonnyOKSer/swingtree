@@ -200,6 +200,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     // Step 3: Get ASHE predictions - search by any alias name
     // Filter by tour to separate ATP and WTA draws
+    // Exclude qualifying round predictions (is_qualifying = true)
     const likeConditions = searchPatterns.map((_, i) => `LOWER(tournament) LIKE $${i + 1}`).join(' OR ')
     const predictionsResult = await pool.query(`
       SELECT
@@ -222,6 +223,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       WHERE (${likeConditions})
         AND prediction_date >= CURRENT_DATE - INTERVAL '14 days'
         AND COALESCE(tour, 'ATP') = $${searchPatterns.length + 1}
+        AND (is_qualifying IS NULL OR is_qualifying = FALSE)
       ORDER BY prediction_date ASC, id ASC
     `, [...searchPatterns.map(p => `%${p}%`), tour])
 
