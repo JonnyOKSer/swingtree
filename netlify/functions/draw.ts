@@ -195,11 +195,13 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       }
     }
 
-    // DEBUG logging
+    // DEBUG logging - help diagnose draw issues
     console.log('Draw API Debug:', {
       tournamentSlug,
+      requestedTour,
+      tour,
       searchPatterns,
-      tour
+      tournamentInfo: tournamentInfo ? { id: tournamentInfo.tournament_id, name: tournamentInfo.name } : null
     })
 
     // Step 3: Get ASHE predictions - search by any alias name
@@ -230,6 +232,19 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     `, [...searchPatterns.map(p => `%${p}%`), tour])
 
     console.log('Predictions query returned:', predictionsResult.rows.length, 'rows')
+    if (predictionsResult.rows.length > 0) {
+      console.log('First prediction:', predictionsResult.rows[0])
+    } else {
+      // Debug: check if any predictions exist for this tournament without tour filter
+      const debugResult = await pool.query(`
+        SELECT tournament, tour, COUNT(*) as count
+        FROM prediction_log
+        WHERE prediction_date >= CURRENT_DATE - INTERVAL '14 days'
+          AND (${likeConditions})
+        GROUP BY tournament, tour
+      `, [...searchPatterns.map(p => `%${p}%`)])
+      console.log('Debug - predictions without tour filter:', debugResult.rows)
+    }
 
     // Determine draw size from tournament info
     const drawSize = getDrawSize(tourneyLevel, tournamentInfo?.draw_size)
