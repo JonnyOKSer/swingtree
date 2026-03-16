@@ -14,6 +14,10 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# Scheduled function: Auto-reconcile every 10 minutes
+[functions."auto-reconcile"]
+  schedule = "*/10 * * * *"
+
 # API routes
 [[redirects]]
   from = "/api/*"
