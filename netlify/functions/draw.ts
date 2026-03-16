@@ -195,14 +195,8 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       }
     }
 
-    // DEBUG logging - help diagnose draw issues
-    console.log('Draw API Debug:', {
-      tournamentSlug,
-      requestedTour,
-      tour,
-      searchPatterns,
-      tournamentInfo: tournamentInfo ? { id: tournamentInfo.tournament_id, name: tournamentInfo.name } : null
-    })
+    // Log for monitoring (not verbose debug)
+    console.log(`Draw request: ${tournamentSlug} (${tour})`)
 
     // Step 3: Get ASHE predictions - search by any alias name
     // Filter by tour to separate ATP and WTA draws
@@ -231,20 +225,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       ORDER BY prediction_date ASC, id ASC
     `, [...searchPatterns.map(p => `%${p}%`), tour])
 
-    console.log('Predictions query returned:', predictionsResult.rows.length, 'rows')
-    if (predictionsResult.rows.length > 0) {
-      console.log('First prediction:', predictionsResult.rows[0])
-    } else {
-      // Debug: check if any predictions exist for this tournament without tour filter
-      const debugResult = await pool.query(`
-        SELECT tournament, tour, COUNT(*) as count
-        FROM prediction_log
-        WHERE prediction_date >= CURRENT_DATE - INTERVAL '14 days'
-          AND (${likeConditions})
-        GROUP BY tournament, tour
-      `, [...searchPatterns.map(p => `%${p}%`)])
-      console.log('Debug - predictions without tour filter:', debugResult.rows)
-    }
+    console.log(`Found ${predictionsResult.rows.length} predictions for ${tournamentSlug} (${tour})`)
 
     // Determine draw size from tournament info
     const drawSize = getDrawSize(tourneyLevel, tournamentInfo?.draw_size)
@@ -270,7 +251,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       predictionsByRound[round].push(pred)
     }
 
-    console.log('Predictions by round:', Object.keys(predictionsByRound).map(r => `${r}:${predictionsByRound[r].length}`).join(', '))
+    // Log rounds found for monitoring
+    if (Object.keys(predictionsByRound).length > 0) {
+      console.log('Rounds:', Object.keys(predictionsByRound).join(', '))
+    }
 
     // Step 5: Build complete bracket structure
     const rounds: Round[] = []
@@ -303,7 +287,6 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       }
     }
 
-    console.log('Current round:', currentRound)
 
     for (const roundName of config.rounds) {
       const matchCount = config.matchCounts[roundName]
