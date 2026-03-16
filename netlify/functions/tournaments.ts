@@ -10,10 +10,11 @@ interface Tournament {
   surface: string
   category: string
   tour: string
-  status: 'active' | 'upcoming'
+  status: 'active' | 'upcoming' | 'completed'
   round: string | null
   startDate: string | null
   endDate: string | null
+  lastPredDate?: string
 }
 
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
@@ -73,20 +74,49 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // Get tournaments with recent predictions (active tournaments)
     // A tournament is "active" if it has predictions in the last 14 days
     // Include all tiers (including SKIP) so WTA shows
-    // Also get today's round to prioritize current-day matches over historical completed ones
+    // Get the latest round from the most recent prediction date
     const recentPredictionsResult = await pool.query(`
+      WITH latest_rounds AS (
+        SELECT
+          tournament,
+          COALESCE(tour, 'ATP') as tour,
+          round,
+          prediction_date,
+          actual_winner,
+          ROW_NUMBER() OVER (
+            PARTITION BY tournament, COALESCE(tour, 'ATP')
+            ORDER BY prediction_date DESC,
+              CASE round
+                WHEN 'F' THEN 1
+                WHEN 'SF' THEN 2
+                WHEN 'QF' THEN 3
+                WHEN 'R16' THEN 4
+                WHEN 'R32' THEN 5
+                WHEN 'R64' THEN 6
+                ELSE 7
+              END
+          ) as rn
+        FROM prediction_log
+        WHERE prediction_date >= CURRENT_DATE - INTERVAL '14 days'
+      )
       SELECT
-        tournament,
-        COALESCE(tour, 'ATP') as tour,
+        p.tournament,
+        COALESCE(p.tour, 'ATP') as tour,
         COUNT(*) as pred_count,
-        COUNT(CASE WHEN actual_winner IS NOT NULL THEN 1 END) as completed_count,
-        MAX(prediction_date) as last_pred_date,
-        MAX(CASE WHEN prediction_date = CURRENT_DATE THEN round END) as today_round,
-        COUNT(CASE WHEN prediction_date = CURRENT_DATE THEN 1 END) as today_count,
-        COUNT(CASE WHEN prediction_date = CURRENT_DATE AND actual_winner IS NULL THEN 1 END) as today_pending
-      FROM prediction_log
-      WHERE prediction_date >= CURRENT_DATE - INTERVAL '14 days'
-      GROUP BY tournament, COALESCE(tour, 'ATP')
+        COUNT(CASE WHEN p.actual_winner IS NOT NULL THEN 1 END) as completed_count,
+        MAX(p.prediction_date) as last_pred_date,
+        COUNT(CASE WHEN p.prediction_date = CURRENT_DATE AND p.actual_winner IS NULL THEN 1 END) as today_pending,
+        (SELECT lr.round FROM latest_rounds lr
+         WHERE lr.tournament = p.tournament
+           AND lr.tour = COALESCE(p.tour, 'ATP')
+           AND lr.rn = 1) as latest_round,
+        (SELECT lr.actual_winner IS NOT NULL FROM latest_rounds lr
+         WHERE lr.tournament = p.tournament
+           AND lr.tour = COALESCE(p.tour, 'ATP')
+           AND lr.rn = 1) as latest_completed
+      FROM prediction_log p
+      WHERE p.prediction_date >= CURRENT_DATE - INTERVAL '14 days'
+      GROUP BY p.tournament, COALESCE(p.tour, 'ATP')
     `)
 
     // Map round codes to display names
@@ -100,52 +130,41 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       'R128': 'Round of 128'
     }
 
-    // Get current round from prediction_log
-    // Priority: today's round > pending predictions count > completed predictions count
-    function inferCurrentRound(completed: number, pending: number, drawSize: number, todayRound?: string, todayPending?: number): string {
-      // If there are predictions for today, use today's round (most accurate)
-      if (todayRound && ROUND_DISPLAY[todayRound]) {
-        return ROUND_DISPLAY[todayRound]
-      }
-
-      // Fall back to counting pending predictions (today's round wasn't captured)
-      if (pending > 0) {
-        if (pending <= 1) return 'Final'
-        if (pending <= 2) return 'Semifinals'
-        if (pending <= 4) return 'Quarterfinals'
-        if (pending <= 8) return 'Round of 16'
-        if (pending <= 16) return 'Round of 32'
-        return 'Round of 64'
-      }
-
-      // All predictions completed - infer next round from completion count
-      if (completed > 0) {
-        if (completed <= 1) return 'Champion' // Final is complete
-        if (completed <= 2) return 'Final'     // SF complete, playing Final
-        if (completed <= 4) return 'Semifinals' // QF complete, playing SF
-        if (completed <= 8) return 'Quarterfinals'
-        if (completed <= 16) return 'Round of 16'
-        return 'Round of 32'
-      }
-
-      return 'Round of 64'
-    }
-
     for (const row of recentPredictionsResult.rows) {
       const name = row.tournament
       const tour = row.tour || 'ATP'
       const canonicalKey = getCanonicalKey(name, tour)
       const displayName = getDisplayName(name)
       const metadata = TOURNAMENT_METADATA[name] || TOURNAMENT_METADATA[displayName]
-      const completed = parseInt(row.completed_count) || 0
-      const pending = parseInt(row.pred_count) - completed
-      const todayRound = row.today_round || undefined
       const todayPending = parseInt(row.today_pending) || 0
+      const latestRound = row.latest_round
+      const latestCompleted = row.latest_completed
+      const lastPredDate = row.last_pred_date
 
       // Determine category based on tour
       let category = metadata?.category || tour
       if (tour === 'WTA' && category.startsWith('ATP')) {
         category = category.replace('ATP', 'WTA')
+      }
+
+      // Determine status and round
+      let status: 'active' | 'completed' = 'active'
+      let displayRound = latestRound ? ROUND_DISPLAY[latestRound] || latestRound : 'Round of 64'
+
+      // If the latest round prediction is completed (has actual_winner), tournament might be done
+      // If latest round is Final and it's completed, tournament is done
+      if (latestRound === 'F' && latestCompleted) {
+        status = 'completed'
+        displayRound = 'Final'
+      } else if (todayPending === 0 && latestCompleted) {
+        // No pending today and latest is completed - likely completed tournament
+        // But only mark as completed if it's been more than a day since last prediction
+        const lastDate = new Date(lastPredDate)
+        const today = new Date()
+        const daysSince = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
+        if (daysSince >= 1) {
+          status = 'completed'
+        }
       }
 
       // Only add if not already present (deduplication by canonical key + tour)
@@ -158,11 +177,12 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           city: metadata?.city || displayName,
           surface: 'Hard',
           category,
-          tour,  // Use actual tour from prediction_log, not metadata
-          status: 'active',
-          round: inferCurrentRound(completed, pending, 96, todayRound, todayPending),
+          tour,
+          status,
+          round: displayRound,
           startDate: null,
-          endDate: null
+          endDate: null,
+          lastPredDate: lastPredDate
         })
       }
     }
@@ -229,7 +249,14 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       // tournaments table might not exist
     }
 
-    const tournaments = Array.from(tournamentMap.values())
+    // Sort tournaments: active first, then upcoming, then completed
+    const statusOrder: Record<string, number> = { active: 0, upcoming: 1, completed: 2 }
+    const tournaments = Array.from(tournamentMap.values()).sort((a, b) => {
+      const statusDiff = statusOrder[a.status] - statusOrder[b.status]
+      if (statusDiff !== 0) return statusDiff
+      // Within same status, sort by name
+      return a.name.localeCompare(b.name)
+    })
 
     return {
       statusCode: 200,
