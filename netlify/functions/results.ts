@@ -70,8 +70,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) as total,
         SUM(CASE WHEN (correct = true OR (correct IS NULL AND actual_winner = predicted_winner))
                   AND confidence_tier NOT IN ('SKIP', 'VOID') THEN 1 ELSE 0 END) as match_wins,
-        COUNT(*) as first_set_total,
-        SUM(CASE WHEN first_set_score_correct = true THEN 1 ELSE 0 END) as first_set_wins
+        -- First set stats: exclude qualifying rounds (round = 'Q' or starts with 'Q' followed by digits)
+        COUNT(*) FILTER (WHERE round IS NULL OR (round != 'Q' AND round !~ '^Q[0-9]*$')) as first_set_total,
+        SUM(CASE WHEN first_set_score_correct = true
+                  AND (round IS NULL OR (round != 'Q' AND round !~ '^Q[0-9]*$')) THEN 1 ELSE 0 END) as first_set_wins
       FROM deduplicated
       GROUP BY COALESCE(tour, 'ATP')
     `)
@@ -147,8 +149,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) as match_total,
         SUM(CASE WHEN (correct = true OR (correct IS NULL AND actual_winner = predicted_winner))
                   AND confidence_tier NOT IN ('SKIP', 'VOID') THEN 1 ELSE 0 END) as match_wins,
-        COUNT(*) as first_set_total,
-        SUM(CASE WHEN first_set_score_correct = true THEN 1 ELSE 0 END) as first_set_wins
+        -- First set stats: exclude qualifying rounds
+        COUNT(*) FILTER (WHERE round IS NULL OR (round != 'Q' AND round !~ '^Q[0-9]*$')) as first_set_total,
+        SUM(CASE WHEN first_set_score_correct = true
+                  AND (round IS NULL OR (round != 'Q' AND round !~ '^Q[0-9]*$')) THEN 1 ELSE 0 END) as first_set_wins
       FROM deduplicated
       GROUP BY tournament, COALESCE(tour, 'ATP')
       HAVING COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) > 0

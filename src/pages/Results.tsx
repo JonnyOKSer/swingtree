@@ -212,7 +212,7 @@ export default function Results() {
             />
           </div>
           <p className="results-note">
-            Activation Date: March 13 2026. Match Records include Strong, Confident, Pick Tier Predictions while 1st Set Stats include All Prediction Tiers + Recommended Skips.
+            Activation Date: March 13 2026. Match Records include Strong, Confident, Pick, Lean Tier Predictions. 1st Set Stats include all tiers but exclude qualifying rounds.
           </p>
         </>
       ) : (
