@@ -98,25 +98,33 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           ) as rn
         FROM prediction_log
         WHERE prediction_date >= CURRENT_DATE - INTERVAL '14 days'
+      ),
+      tournament_stats AS (
+        SELECT
+          tournament,
+          COALESCE(tour, 'ATP') as tour,
+          COUNT(*) as pred_count,
+          COUNT(CASE WHEN actual_winner IS NOT NULL THEN 1 END) as completed_count,
+          MAX(prediction_date) as last_pred_date,
+          COUNT(CASE WHEN prediction_date = CURRENT_DATE AND actual_winner IS NULL THEN 1 END) as today_pending
+        FROM prediction_log
+        WHERE prediction_date >= CURRENT_DATE - INTERVAL '14 days'
+        GROUP BY tournament, COALESCE(tour, 'ATP')
       )
       SELECT
-        p.tournament,
-        COALESCE(p.tour, 'ATP') as tour,
-        COUNT(*) as pred_count,
-        COUNT(CASE WHEN p.actual_winner IS NOT NULL THEN 1 END) as completed_count,
-        MAX(p.prediction_date) as last_pred_date,
-        COUNT(CASE WHEN p.prediction_date = CURRENT_DATE AND p.actual_winner IS NULL THEN 1 END) as today_pending,
-        (SELECT lr.round FROM latest_rounds lr
-         WHERE lr.tournament = p.tournament
-           AND lr.tour = COALESCE(p.tour, 'ATP')
-           AND lr.rn = 1) as latest_round,
-        (SELECT lr.actual_winner IS NOT NULL FROM latest_rounds lr
-         WHERE lr.tournament = p.tournament
-           AND lr.tour = COALESCE(p.tour, 'ATP')
-           AND lr.rn = 1) as latest_completed
-      FROM prediction_log p
-      WHERE p.prediction_date >= CURRENT_DATE - INTERVAL '14 days'
-      GROUP BY p.tournament, COALESCE(p.tour, 'ATP')
+        ts.tournament,
+        ts.tour,
+        ts.pred_count,
+        ts.completed_count,
+        ts.last_pred_date,
+        ts.today_pending,
+        lr.round as latest_round,
+        (lr.actual_winner IS NOT NULL) as latest_completed
+      FROM tournament_stats ts
+      LEFT JOIN latest_rounds lr
+        ON lr.tournament = ts.tournament
+        AND lr.tour = ts.tour
+        AND lr.rn = 1
     `)
 
     // Map round codes to display names
