@@ -155,7 +155,6 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
                   AND (round IS NULL OR (round != 'Q' AND round !~ '^Q[0-9]*$')) THEN 1 ELSE 0 END) as first_set_wins
       FROM deduplicated
       GROUP BY tournament, COALESCE(tour, 'ATP')
-      HAVING COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) > 0
       ORDER BY COUNT(*) DESC
     `)
 
