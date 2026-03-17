@@ -63,6 +63,14 @@ export default function Admin() {
     details?: string[]
   } | null>(null)
 
+  // Test tweet
+  const [testingTweet, setTestingTweet] = useState(false)
+  const [tweetResult, setTweetResult] = useState<{
+    success: boolean
+    message: string
+    tweet_url?: string
+  } | null>(null)
+
   // User search filter
   const [userSearch, setUserSearch] = useState('')
 
@@ -254,6 +262,38 @@ export default function Admin() {
     }
   }
 
+  const handleTestTweet = async () => {
+    if (!confirm('This will post a test tweet to X. Continue?')) return
+
+    setTestingTweet(true)
+    setTweetResult(null)
+
+    try {
+      const response = await fetch('https://agent-production-765b.up.railway.app/test-tweet')
+      const data = await response.json()
+
+      if (data.success) {
+        setTweetResult({
+          success: true,
+          message: data.message || 'Test tweet posted!',
+          tweet_url: data.tweet_url
+        })
+      } else {
+        setTweetResult({
+          success: false,
+          message: data.error || 'Failed to post tweet'
+        })
+      }
+    } catch {
+      setTweetResult({
+        success: false,
+        message: 'Network error - Railway may be offline'
+      })
+    } finally {
+      setTestingTweet(false)
+    }
+  }
+
   if (loading || !user?.isAdmin) {
     return (
       <div className="admin-page">
@@ -416,6 +456,34 @@ export default function Admin() {
                   <p className="reconcile-detail">...and {reconcileResult.details.length - 10} more</p>
                 )}
               </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Test Tweet */}
+      <section className="admin-section emergency-section">
+        <h2>Test X (Twitter) Posting</h2>
+        <p className="emergency-description">
+          Send a test tweet to verify X API connectivity.
+          This will post "🎾 ASHE test tweet — please ignore" to the account.
+        </p>
+        <button
+          onClick={handleTestTweet}
+          disabled={testingTweet}
+          className="trigger-btn"
+        >
+          {testingTweet ? 'Posting...' : 'Send Test Tweet'}
+        </button>
+        {tweetResult && (
+          <div className={`trigger-result ${tweetResult.success ? 'success' : 'error'}`}>
+            <p>{tweetResult.message}</p>
+            {tweetResult.tweet_url && (
+              <p>
+                <a href={tweetResult.tweet_url} target="_blank" rel="noopener noreferrer">
+                  View tweet →
+                </a>
+              </p>
             )}
           </div>
         )}
