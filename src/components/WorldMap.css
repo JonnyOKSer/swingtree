@@ -373,6 +373,17 @@
   color: #787068;
 }
 
+/* Completed indicator */
+.completed-indicator {
+  color: #81c784;
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+.round.completed {
+  color: #81c784;
+}
+
 .tour-badge {
   font-size: 10px;
   padding: 3px 6px;

@@ -15,7 +15,7 @@ export interface Tournament {
   tour: string
   startDate: string | null
   endDate: string | null
-  status: 'active' | 'upcoming'
+  status: 'active' | 'upcoming' | 'completed'
   round: string | null
 }
 
@@ -249,6 +249,11 @@ export default function WorldMap({ onTournamentSelect }: WorldMapProps) {
                     <>
                       <span className="live-indicator" />
                       <span className="round">{tournament.round}</span>
+                    </>
+                  ) : tournament.status === 'completed' ? (
+                    <>
+                      <span className="completed-indicator">✓</span>
+                      <span className="round completed">{tournament.round}</span>
                     </>
                   ) : (
                     <span className="days-until">

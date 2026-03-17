@@ -160,7 +160,8 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       let displayRound = latestRound ? ROUND_DISPLAY[latestRound] || latestRound : 'Round of 64'
 
       // Qualifying rounds - tournament hasn't really started main draw yet
-      const isQualifying = latestRound === 'Q' || latestRound?.startsWith('Q')
+      // Note: 'QF' is Quarterfinals, not Qualifying - only match exact 'Q' or 'Q1', 'Q2', 'Q3'
+      const isQualifying = latestRound === 'Q' || /^Q\d*$/.test(latestRound || '')
 
       // If the latest round prediction is completed (has actual_winner), tournament might be done
       // If latest round is Final and it's completed, tournament is done
