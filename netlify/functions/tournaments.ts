@@ -156,17 +156,24 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       }
 
       // Determine status and round
-      let status: 'active' | 'completed' = 'active'
+      let status: 'active' | 'upcoming' | 'completed' = 'active'
       let displayRound = latestRound ? ROUND_DISPLAY[latestRound] || latestRound : 'Round of 64'
+
+      // Qualifying rounds - tournament hasn't really started main draw yet
+      const isQualifying = latestRound === 'Q' || latestRound?.startsWith('Q')
 
       // If the latest round prediction is completed (has actual_winner), tournament might be done
       // If latest round is Final and it's completed, tournament is done
       if (latestRound === 'F' && latestCompleted) {
         status = 'completed'
         displayRound = 'Final'
-      } else if (todayPending === 0 && latestCompleted) {
-        // No pending today and latest is completed - likely completed tournament
-        // But only mark as completed if it's been more than a day since last prediction
+      } else if (isQualifying) {
+        // Still in qualifying or qualifying just finished - show as upcoming for main draw
+        status = 'active'
+        displayRound = 'Qualifying'
+      } else if (todayPending === 0 && latestCompleted && !isQualifying) {
+        // No pending today and latest main draw round is completed
+        // Mark as completed if it's been more than a day since last prediction
         const lastDate = new Date(lastPredDate)
         const today = new Date()
         const daysSince = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
