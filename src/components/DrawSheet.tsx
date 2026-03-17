@@ -59,7 +59,7 @@ interface DrawSheetProps {
   surface: string
   city: string
   round: string | null
-  status: 'active' | 'upcoming'
+  status: 'active' | 'upcoming' | 'completed'
   tour: string
   onClose: () => void
 }
