@@ -327,13 +327,20 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     // Build prediction lookup by players using LAST NAME matching
     // "J. Duckworth" -> "duckworth", "James Duckworth" -> "duckworth"
+    // Handle Chinese names: "Yibing Wu" -> "wu", "Y. Wu" -> "wu"
     const extractLastName = (name: string): string => {
       if (!name) return ''
       const clean = name.toLowerCase().trim().replace(/[-.]/g, ' ').replace(/\s+/g, ' ')
       const parts = clean.split(' ')
-      // Handle "D. Lastname" or "First Lastname" or "Lastname F."
-      // Last substantial part is usually the last name
-      return parts.filter(p => p.length > 2).pop() || parts[parts.length - 1] || ''
+
+      // If last part is short (1-2 chars like "Wu"), it's likely a Chinese surname - use it
+      const lastPart = parts[parts.length - 1]
+      if (lastPart && lastPart.length <= 3 && parts.length > 1) {
+        return lastPart
+      }
+
+      // Otherwise get the last substantial part (>2 chars)
+      return parts.filter(p => p.length > 2).pop() || lastPart || ''
     }
 
     // Create match key from two last names (sorted for order independence)
@@ -343,11 +350,21 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       return [ln1, ln2].sort().join('|') + '|' + round
     }
 
+    // Also create partial key (first 5 chars of each name) for fuzzy matching
+    const makePartialKey = (name1: string, name2: string, round: string): string => {
+      const ln1 = extractLastName(name1).slice(0, 5)
+      const ln2 = extractLastName(name2).slice(0, 5)
+      return [ln1, ln2].sort().join('|') + '|' + round
+    }
+
     const predictionLookup: Record<string, any> = {}
+    const partialLookup: Record<string, any> = {}
     for (const round of Object.keys(predictionsByRound)) {
       for (const pred of predictionsByRound[round]) {
         const key = makeMatchKey(pred.player1_name, pred.player2_name, round)
         predictionLookup[key] = pred
+        const partialKey = makePartialKey(pred.player1_name, pred.player2_name, round)
+        if (!partialLookup[partialKey]) partialLookup[partialKey] = pred
       }
     }
 
@@ -364,6 +381,11 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         if (drawMatch) {
           const lookupKey = makeMatchKey(drawMatch.player_1_name, drawMatch.player_2_name, roundName)
           prediction = predictionLookup[lookupKey]
+          // Try partial match (first 5 chars) as fallback for spelling variations
+          if (!prediction) {
+            const partialKey = makePartialKey(drawMatch.player_1_name, drawMatch.player_2_name, roundName)
+            prediction = partialLookup[partialKey]
+          }
         }
 
         if (drawMatch) {
