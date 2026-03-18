@@ -390,12 +390,16 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       const roundName = config.rounds[roundIndex]
       const matchCount = config.matchCounts[roundName]
       const drawMatches = drawByRound[roundName] || []
+      const roundPredictions = predictionsByRound[roundName] || []
       const matches: MatchSlot[] = []
 
       // Bye heuristic: if first round has some matches but not all slots filled,
       // the empty slots are likely byes (seeded players advancing without playing)
       const isFirstRound = roundIndex === 0
       const hasPartialDraw = drawMatches.length > 0 && drawMatches.length < matchCount
+
+      // Track which predictions have been used (for no-draw-data case)
+      let predictionIndex = 0
 
       for (let slot = 0; slot < matchCount; slot++) {
         const drawMatch = drawMatches[slot]
@@ -410,6 +414,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
             const partialKey = makePartialKey(drawMatch.player_1_name, drawMatch.player_2_name, roundName)
             prediction = partialLookup[partialKey]
           }
+        } else if (drawMatches.length === 0 && predictionIndex < roundPredictions.length) {
+          // No draw data for this round - use predictions in order
+          prediction = roundPredictions[predictionIndex]
+          predictionIndex++
         }
 
         if (drawMatch) {
