@@ -4,7 +4,7 @@ import './DrawSheet.css'
 
 interface MatchSlot {
   slot: number
-  status: 'completed' | 'predicted' | 'known' | 'tbd' | 'void'
+  status: 'completed' | 'predicted' | 'known' | 'tbd' | 'void' | 'bye'
   player1: string
   player1_country?: string
   player1_seed?: number
@@ -118,6 +118,17 @@ function MatchCard({ match }: { match: MatchSlot }) {
         <div className="vs-divider">vs</div>
         <div className="player-row">
           <span className="player-name muted">TBD</span>
+        </div>
+      </div>
+    )
+  }
+
+  // Bye slot (seeded player advances without playing)
+  if (match.status === 'bye') {
+    return (
+      <div className="match-card match-bye">
+        <div className="player-row">
+          <span className="player-name muted">Bye</span>
         </div>
       </div>
     )

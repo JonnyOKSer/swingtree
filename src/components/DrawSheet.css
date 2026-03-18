@@ -303,6 +303,17 @@
   border-color: #333333;
 }
 
+/* Bye slot (seeded player advances) */
+.match-card.match-bye {
+  border: 1px dashed #444444;
+  opacity: 0.5;
+  cursor: default;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Voided match (withdrawal, walkover) */
 .match-card.match-void {
   border-style: dashed;

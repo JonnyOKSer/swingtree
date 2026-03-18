@@ -13,7 +13,7 @@ function getConfidenceTier(prob: number): string {
 
 interface MatchSlot {
   slot: number
-  status: 'completed' | 'predicted' | 'known' | 'tbd' | 'void'
+  status: 'completed' | 'predicted' | 'known' | 'tbd' | 'void' | 'bye'
   player1: string
   player1_country?: string
   player1_seed?: number
@@ -380,10 +380,16 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       }
     }
 
-    for (const roundName of config.rounds) {
+    for (let roundIndex = 0; roundIndex < config.rounds.length; roundIndex++) {
+      const roundName = config.rounds[roundIndex]
       const matchCount = config.matchCounts[roundName]
       const drawMatches = drawByRound[roundName] || []
       const matches: MatchSlot[] = []
+
+      // Bye heuristic: if first round has some matches but not all slots filled,
+      // the empty slots are likely byes (seeded players advancing without playing)
+      const isFirstRound = roundIndex === 0
+      const hasPartialDraw = drawMatches.length > 0 && drawMatches.length < matchCount
 
       for (let slot = 0; slot < matchCount; slot++) {
         const drawMatch = drawMatches[slot]
@@ -538,13 +544,24 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
             })
           }
         } else {
-          // TBD slot (no draw data or prediction for this match yet)
-          matches.push({
-            slot: slot + 1,
-            status: 'tbd',
-            player1: 'TBD',
-            player2: 'TBD'
-          })
+          // No draw data for this slot
+          // If first round has partial data, remaining slots are likely byes
+          if (isFirstRound && hasPartialDraw) {
+            matches.push({
+              slot: slot + 1,
+              status: 'bye',
+              player1: 'Bye',
+              player2: 'Bye'
+            })
+          } else {
+            // TBD slot (no draw data or prediction for this match yet)
+            matches.push({
+              slot: slot + 1,
+              status: 'tbd',
+              player1: 'TBD',
+              player2: 'TBD'
+            })
+          }
         }
       }
 
