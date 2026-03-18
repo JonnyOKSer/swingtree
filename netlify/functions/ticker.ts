@@ -47,7 +47,7 @@ function formatScoreWinnerFirst(
   player2Name: string,
   winnerName: string | null
 ): string {
-  if (!score || !winnerName) return score || ''
+  if (!score) return ''
 
   // Parse set score like "0 - 2" or "1-2"
   const match = score.match(/(\d+)\s*-\s*(\d+)/)
@@ -56,16 +56,35 @@ function formatScoreWinnerFirst(
   const p1Sets = parseInt(match[1], 10)
   const p2Sets = parseInt(match[2], 10)
 
-  // Determine if winner is player1 or player2
-  const winnerIsPlayer1 = winnerName.toLowerCase().includes(player1Name.split(' ').pop()?.toLowerCase() || '') ||
-                          player1Name.toLowerCase().includes(winnerName.split(' ').pop()?.toLowerCase() || '')
+  // Always show higher number first (winner's sets)
+  const winnerSets = Math.max(p1Sets, p2Sets)
+  const loserSets = Math.min(p1Sets, p2Sets)
+  return `${winnerSets}-${loserSets}`
+}
 
-  // Always show winner's sets first (higher number first)
-  if (winnerIsPlayer1) {
-    return `${p1Sets}-${p2Sets}`
-  } else {
-    return `${p2Sets}-${p1Sets}`
-  }
+function inferWinnerFromScore(
+  score: string,
+  player1Name: string,
+  player2Name: string,
+  winnerName: string | null,
+  isLive: boolean
+): string | null {
+  if (winnerName) return winnerName
+  if (isLive) return null
+  if (!score) return null
+
+  // Parse set score like "0 - 2" or "1-2"
+  const match = score.match(/(\d+)\s*-\s*(\d+)/)
+  if (!match) return null
+
+  const p1Sets = parseInt(match[1], 10)
+  const p2Sets = parseInt(match[2], 10)
+
+  // In best of 3, winner needs 2 sets. In best of 5, winner needs 3.
+  if (p1Sets >= 2 && p1Sets > p2Sets) return player1Name
+  if (p2Sets >= 2 && p2Sets > p1Sets) return player2Name
+
+  return null
 }
 
 function determineIndicator(
@@ -148,7 +167,11 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
         dm.round_normalized
     `, tournamentKeyFilter ? [tournamentKeyFilter] : [])
 
-    const matches: TickerMatch[] = result.rows.map(row => ({
+    const matches: TickerMatch[] = result.rows.map(row => {
+      const isLive = row.status === 'live'
+      const winnerName = inferWinnerFromScore(row.score, row.player_1_name, row.player_2_name, row.winner_name, isLive)
+
+      return {
       matchKey: row.match_key,
       tour: row.tour as 'ATP' | 'WTA',
       round: row.round || 'R32',
@@ -157,10 +180,10 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
       tournamentShortName: shortenTournamentName(row.tournament_name),
       player1Name: row.player_1_name,
       player2Name: row.player_2_name,
-      winnerName: row.winner_name || null,
-      score: formatScoreWinnerFirst(row.score, row.player_1_name, row.player_2_name, row.winner_name),
-      isLive: row.status === 'live',
-      indicator: row.winner_name ? determineIndicator({
+      winnerName,
+      score: formatScoreWinnerFirst(row.score, row.player_1_name, row.player_2_name, winnerName),
+      isLive,
+      indicator: winnerName ? determineIndicator({
         correct: row.correct,
         first_set_score_correct: row.first_set_score_correct,
         divergence: Boolean(row.first_set_winner && row.predicted_winner && row.first_set_winner !== row.predicted_winner)
@@ -168,7 +191,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
       scheduledAt: row.scheduled_date ?
         `${row.scheduled_date}T${row.scheduled_time || '00:00'}:00Z` :
         new Date().toISOString()
-    }))
+    }})
 
     return {
       statusCode: 200,
