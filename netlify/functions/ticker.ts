@@ -41,6 +41,33 @@ function shortenTournamentName(name: string): string {
     .substring(0, 20)
 }
 
+function formatScoreWinnerFirst(
+  score: string,
+  player1Name: string,
+  player2Name: string,
+  winnerName: string | null
+): string {
+  if (!score || !winnerName) return score || ''
+
+  // Parse set score like "0 - 2" or "1-2"
+  const match = score.match(/(\d+)\s*-\s*(\d+)/)
+  if (!match) return score
+
+  const p1Sets = parseInt(match[1], 10)
+  const p2Sets = parseInt(match[2], 10)
+
+  // Determine if winner is player1 or player2
+  const winnerIsPlayer1 = winnerName.toLowerCase().includes(player1Name.split(' ').pop()?.toLowerCase() || '') ||
+                          player1Name.toLowerCase().includes(winnerName.split(' ').pop()?.toLowerCase() || '')
+
+  // Always show winner's sets first (higher number first)
+  if (winnerIsPlayer1) {
+    return `${p1Sets}-${p2Sets}`
+  } else {
+    return `${p2Sets}-${p1Sets}`
+  }
+}
+
 function determineIndicator(
   prediction: { correct?: boolean; first_set_score_correct?: boolean; divergence?: boolean } | null
 ): '✅' | '❌' | '🌳' | '⚡' | '' {
@@ -128,7 +155,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
       player1Name: row.player_1_name,
       player2Name: row.player_2_name,
       winnerName: row.winner_name || null,
-      score: row.score || '',
+      score: formatScoreWinnerFirst(row.score, row.player_1_name, row.player_2_name, row.winner_name),
       isLive: row.status === 'live',
       indicator: row.winner_name ? determineIndicator({
         correct: row.correct,
