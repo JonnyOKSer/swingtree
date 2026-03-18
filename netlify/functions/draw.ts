@@ -200,8 +200,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     // Step 3a: Get draw data from draw_matches (api-tennis.com source)
     // This gives us the actual bracket with player names
-    // Use slug-derived pattern for more flexible matching (e.g., "miami" matches "Miami" and "Miami Open")
-    const slugPattern = tournamentSlug.replace(/-/g, ' ').toLowerCase()
+    // Use FIRST WORD of slug for matching (e.g., "miami-open" -> "miami" matches "Miami")
+    // This handles cases where frontend sends "miami-open" but DB has just "Miami"
+    const slugWords = tournamentSlug.replace(/-/g, ' ').toLowerCase().split(' ')
+    const primaryWord = slugWords[0] // First word is usually the city/tournament name
     const drawMatchesResult = await pool.query(`
       SELECT
         match_key,
@@ -219,7 +221,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       WHERE LOWER(tournament_name) LIKE $1
         AND UPPER(tour) = $2
       ORDER BY scheduled_date ASC, match_key ASC
-    `, [`%${slugPattern}%`, tour])
+    `, [`%${primaryWord}%`, tour])
 
     console.log(`Found ${drawMatchesResult.rows.length} draw matches for ${tournamentSlug} (${tour})`)
 
