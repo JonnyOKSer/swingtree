@@ -198,7 +198,40 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // Log for monitoring (not verbose debug)
     console.log(`Draw request: ${tournamentSlug} (${tour})`)
 
-    // Step 3: Get ASHE predictions - search by any alias name
+    // Step 3a: Get draw data from draw_matches (api-tennis.com source)
+    // This gives us the actual bracket with player names
+    const drawMatchesResult = await pool.query(`
+      SELECT
+        match_key,
+        round_normalized as round,
+        player_1_key,
+        player_1_name,
+        player_2_key,
+        player_2_name,
+        status,
+        winner_key,
+        winner_name,
+        final_result,
+        scheduled_date
+      FROM draw_matches
+      WHERE LOWER(tournament_name) LIKE $1
+        AND UPPER(tour) = $2
+      ORDER BY scheduled_date ASC, match_key ASC
+    `, [`%${searchPattern.toLowerCase()}%`, tour])
+
+    console.log(`Found ${drawMatchesResult.rows.length} draw matches for ${tournamentSlug} (${tour})`)
+
+    // Build a lookup for draw matches by round
+    const drawByRound: Record<string, any[]> = {}
+    for (const match of drawMatchesResult.rows) {
+      const round = match.round || 'R64'
+      if (!drawByRound[round]) {
+        drawByRound[round] = []
+      }
+      drawByRound[round].push(match)
+    }
+
+    // Step 3b: Get ASHE predictions - search by any alias name
     // Filter by tour to separate ATP and WTA draws
     // Exclude qualifying round predictions (round = 'Q')
     const likeConditions = searchPatterns.map((_, i) => `LOWER(tournament) LIKE $${i + 1}`).join(' OR ')
@@ -290,15 +323,100 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     }
 
 
+    // Build prediction lookup by players (normalized for matching)
+    const normalizeName = (name: string) => name?.toLowerCase().trim().replace(/\s+/g, ' ') || ''
+    const predictionLookup: Record<string, any> = {}
+    for (const round of Object.keys(predictionsByRound)) {
+      for (const pred of predictionsByRound[round]) {
+        // Create lookup key from sorted player names
+        const key = [normalizeName(pred.player1_name), normalizeName(pred.player2_name)].sort().join('|') + '|' + round
+        predictionLookup[key] = pred
+      }
+    }
+
     for (const roundName of config.rounds) {
       const matchCount = config.matchCounts[roundName]
+      const drawMatches = drawByRound[roundName] || []
       const predictions = predictionsByRound[roundName] || []
       const matches: MatchSlot[] = []
 
-      for (let slot = 0; slot < matchCount; slot++) {
-        const prediction = predictions[slot]
+      // Use draw matches as primary source, fall back to predictions
+      const hasDrawData = drawMatches.length > 0
 
-        if (prediction) {
+      for (let slot = 0; slot < matchCount; slot++) {
+        const drawMatch = drawMatches[slot]
+        let prediction = predictions[slot]
+
+        // If we have draw data, try to find matching prediction
+        if (drawMatch && !prediction) {
+          const lookupKey = [normalizeName(drawMatch.player_1_name), normalizeName(drawMatch.player_2_name)].sort().join('|') + '|' + roundName
+          prediction = predictionLookup[lookupKey]
+        }
+
+        if (drawMatch) {
+          // We have draw data from api-tennis.com
+          const player1 = drawMatch.player_1_name
+          const player2 = drawMatch.player_2_name
+
+          if (drawMatch.status === 'finished' && drawMatch.winner_name) {
+            // Completed match from draw
+            const loser = drawMatch.winner_name === player1 ? player2 : player1
+            matches.push({
+              slot: slot + 1,
+              status: 'completed',
+              player1: drawMatch.winner_name,
+              player2: loser,
+              winner: drawMatch.winner_name,
+              score: drawMatch.final_result || undefined,
+              prediction: prediction ? {
+                predicted_winner: prediction.predicted_winner,
+                confidence: prediction.predicted_prob || 0.5,
+                tier: prediction.confidence_tier || 'PICK',
+                correct: prediction.correct ?? (prediction.predicted_winner === drawMatch.winner_name)
+              } : undefined,
+              first_set: prediction?.first_set_score ? {
+                predicted_winner: prediction.first_set_winner,
+                predicted_score: prediction.first_set_score,
+                tiebreak_pct: Math.round((prediction.first_set_tiebreak_prob || 0.15) * 100),
+                over_under: (prediction.first_set_over_9_5_prob || 0.5) > 0.5 ? 'Over 9.5' : 'Under 9.5',
+                divergence: prediction.first_set_winner !== prediction.predicted_winner,
+                score_correct: prediction.first_set_score_correct === true
+              } : undefined
+            })
+          } else if (prediction) {
+            // Have both draw and prediction - show as predicted
+            const fsWinner = prediction.first_set_winner
+            const matchWinner = prediction.predicted_winner
+
+            matches.push({
+              slot: slot + 1,
+              status: 'predicted',
+              player1,
+              player2,
+              prediction: {
+                predicted_winner: prediction.predicted_winner,
+                confidence: prediction.predicted_prob || 0.5,
+                tier: prediction.confidence_tier || 'PICK'
+              },
+              first_set: prediction.first_set_score ? {
+                predicted_winner: fsWinner,
+                predicted_score: prediction.first_set_score,
+                tiebreak_pct: Math.round((prediction.first_set_tiebreak_prob || 0.15) * 100),
+                over_under: (prediction.first_set_over_9_5_prob || 0.5) > 0.5 ? 'Over 9.5' : 'Under 9.5',
+                divergence: fsWinner !== matchWinner
+              } : undefined
+            })
+          } else {
+            // Draw data but no prediction yet - show as "known"
+            matches.push({
+              slot: slot + 1,
+              status: 'known',
+              player1,
+              player2
+            })
+          }
+        } else if (prediction) {
+          // No draw data but have prediction (legacy path)
           // Check if this prediction is voided (withdrawal, walkover)
           if (prediction.confidence_tier === 'VOID') {
             const voidReason = prediction.actual_winner?.replace('VOID: ', '') || 'Match cancelled'
@@ -366,7 +484,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
             })
           }
         } else {
-          // TBD slot (no prediction for this match yet)
+          // TBD slot (no draw data or prediction for this match yet)
           matches.push({
             slot: slot + 1,
             status: 'tbd',
