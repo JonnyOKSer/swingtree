@@ -42,15 +42,12 @@ function shortenTournamentName(name: string): string {
 }
 
 function determineIndicator(
-  prediction: { correct?: boolean; first_set_score_correct?: boolean; divergence?: boolean } | null
-): '✅' | '❌' | '🌳' | '⚡' | '' {
+  prediction: { correct?: boolean; first_set_score_correct?: boolean } | null
+): '✅' | '❌' | '🌳' | '' {
   if (!prediction) return ''
 
   // First set score correct gets tree
   if (prediction.first_set_score_correct) return '🌳'
-
-  // Divergence flag
-  if (prediction.divergence) return '⚡'
 
   // Match prediction result
   if (prediction.correct === true) return '✅'
@@ -93,8 +90,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
         dm.scheduled_date,
         dm.scheduled_time,
         pl.correct,
-        pl.first_set_score_correct,
-        pl.first_set_divergence as divergence
+        pl.first_set_score_correct
       FROM draw_matches dm
       LEFT JOIN prediction_log pl ON (
         LOWER(dm.tournament_name) = LOWER(pl.tournament)
@@ -131,8 +127,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
       isLive: row.status === 'live',
       indicator: row.winner_name ? determineIndicator({
         correct: row.correct,
-        first_set_score_correct: row.first_set_score_correct,
-        divergence: row.divergence
+        first_set_score_correct: row.first_set_score_correct
       }) : '',
       scheduledAt: row.scheduled_date ?
         `${row.scheduled_date}T${row.scheduled_time || '00:00'}:00Z` :
