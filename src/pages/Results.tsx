@@ -233,10 +233,12 @@ export default function Results() {
         </>
       ) : (
         <div className="tournament-list">
-          {results.byTournament && results.byTournament.length > 0 ? (
-            results.byTournament.map((t, i) => (
-              <TournamentRow key={`${t.tournament}-${t.tour}-${i}`} tournament={t} />
-            ))
+          {results.byTournament && results.byTournament.filter(t => t.match.total > 0 || t.firstSet.total > 0).length > 0 ? (
+            results.byTournament
+              .filter(t => t.match.total > 0 || t.firstSet.total > 0)
+              .map((t, i) => (
+                <TournamentRow key={`${t.tournament}-${t.tour}-${i}`} tournament={t} />
+              ))
           ) : (
             <p className="no-tournaments">No tournament data available yet.</p>
           )}
