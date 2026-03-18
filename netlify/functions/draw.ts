@@ -325,13 +325,28 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     }
 
 
-    // Build prediction lookup by players (normalized for matching)
-    const normalizeName = (name: string) => name?.toLowerCase().trim().replace(/\s+/g, ' ') || ''
+    // Build prediction lookup by players using LAST NAME matching
+    // "J. Duckworth" -> "duckworth", "James Duckworth" -> "duckworth"
+    const extractLastName = (name: string): string => {
+      if (!name) return ''
+      const clean = name.toLowerCase().trim().replace(/[-.]/g, ' ').replace(/\s+/g, ' ')
+      const parts = clean.split(' ')
+      // Handle "D. Lastname" or "First Lastname" or "Lastname F."
+      // Last substantial part is usually the last name
+      return parts.filter(p => p.length > 2).pop() || parts[parts.length - 1] || ''
+    }
+
+    // Create match key from two last names (sorted for order independence)
+    const makeMatchKey = (name1: string, name2: string, round: string): string => {
+      const ln1 = extractLastName(name1)
+      const ln2 = extractLastName(name2)
+      return [ln1, ln2].sort().join('|') + '|' + round
+    }
+
     const predictionLookup: Record<string, any> = {}
     for (const round of Object.keys(predictionsByRound)) {
       for (const pred of predictionsByRound[round]) {
-        // Create lookup key from sorted player names
-        const key = [normalizeName(pred.player1_name), normalizeName(pred.player2_name)].sort().join('|') + '|' + round
+        const key = makeMatchKey(pred.player1_name, pred.player2_name, round)
         predictionLookup[key] = pred
       }
     }
@@ -339,19 +354,15 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     for (const roundName of config.rounds) {
       const matchCount = config.matchCounts[roundName]
       const drawMatches = drawByRound[roundName] || []
-      const predictions = predictionsByRound[roundName] || []
       const matches: MatchSlot[] = []
-
-      // Use draw matches as primary source, fall back to predictions
-      const hasDrawData = drawMatches.length > 0
 
       for (let slot = 0; slot < matchCount; slot++) {
         const drawMatch = drawMatches[slot]
-        let prediction = predictions[slot]
+        let prediction: any = null
 
-        // If we have draw data, try to find matching prediction
-        if (drawMatch && !prediction) {
-          const lookupKey = [normalizeName(drawMatch.player_1_name), normalizeName(drawMatch.player_2_name)].sort().join('|') + '|' + roundName
+        // If we have draw data, find matching prediction by last names
+        if (drawMatch) {
+          const lookupKey = makeMatchKey(drawMatch.player_1_name, drawMatch.player_2_name, roundName)
           prediction = predictionLookup[lookupKey]
         }
 
