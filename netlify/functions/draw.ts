@@ -1,6 +1,16 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
 import { getPool } from './db'
 
+// Calculate confidence tier from probability (fixes bug in prediction engine)
+function getConfidenceTier(prob: number): string {
+  const pct = prob * 100
+  if (pct >= 85) return 'STRONG'
+  if (pct >= 75) return 'CONFIDENT'
+  if (pct >= 65) return 'PICK'
+  if (pct >= 55) return 'LEAN'
+  return 'SKIP'
+}
+
 interface MatchSlot {
   slot: number
   status: 'completed' | 'predicted' | 'known' | 'tbd' | 'void'
@@ -408,7 +418,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
               prediction: prediction ? {
                 predicted_winner: prediction.predicted_winner,
                 confidence: prediction.predicted_prob || 0.5,
-                tier: prediction.confidence_tier || 'PICK',
+                tier: getConfidenceTier(prediction.predicted_prob || 0.5),
                 correct: prediction.correct ?? (prediction.predicted_winner === drawMatch.winner_name)
               } : undefined,
               first_set: prediction?.first_set_score ? {
@@ -440,7 +450,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
                 predicted_winner: predictedWinnerSlot === 1 ? player1 : predictedWinnerSlot === 2 ? player2 : prediction.predicted_winner,
                 predicted_winner_slot: predictedWinnerSlot,
                 confidence: prediction.predicted_prob || 0.5,
-                tier: prediction.confidence_tier || 'PICK'
+                tier: getConfidenceTier(prediction.predicted_prob || 0.5)
               },
               first_set: prediction.first_set_score ? {
                 predicted_winner: fsWinner,
@@ -491,7 +501,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
               prediction: {
                 predicted_winner: prediction.predicted_winner,
                 confidence: prediction.predicted_prob || 0.5,
-                tier: prediction.confidence_tier || 'PICK',
+                tier: getConfidenceTier(prediction.predicted_prob || 0.5),
                 correct: prediction.correct
               },
               first_set: prediction.first_set_score ? {
@@ -516,7 +526,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
               prediction: {
                 predicted_winner: prediction.predicted_winner,
                 confidence: prediction.predicted_prob || 0.5,
-                tier: prediction.confidence_tier || 'PICK'
+                tier: getConfidenceTier(prediction.predicted_prob || 0.5)
               },
               first_set: prediction.first_set_score ? {
                 predicted_winner: fsWinner,
