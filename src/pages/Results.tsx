@@ -141,11 +141,13 @@ export default function Results() {
   const [results, setResults] = useState<ResultsData>(FALLBACK_RESULTS)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<TabView>('overall')
+  const [includeSkips, setIncludeSkips] = useState(false)
 
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        const response = await fetch('/api/results')
+        const url = includeSkips ? '/api/results?includeSkips=true' : '/api/results'
+        const response = await fetch(url)
         if (response.ok) {
           const data = await response.json()
           if (data.success && data.results) {
@@ -159,7 +161,7 @@ export default function Results() {
       }
     }
     fetchResults()
-  }, [])
+  }, [includeSkips])
 
   return (
     <div className="results-page">
@@ -181,6 +183,17 @@ export default function Results() {
         >
           By Tournament
         </button>
+      </div>
+
+      <div className="results-filter">
+        <label className="toggle-label">
+          <input
+            type="checkbox"
+            checked={includeSkips}
+            onChange={(e) => setIncludeSkips(e.target.checked)}
+          />
+          <span className="toggle-text">Include SKIPs</span>
+        </label>
       </div>
 
       {loading ? (
@@ -212,7 +225,10 @@ export default function Results() {
             />
           </div>
           <p className="results-note">
-            Activation Date: March 13 2026. Match Records include Strong, Confident, Pick, Lean Tier Predictions. 1st Set Stats include all tiers but exclude qualifying rounds.
+            Activation Date: March 13 2026. {includeSkips
+              ? 'Showing all tiers including SKIP.'
+              : 'Showing STRONG, CONFIDENT, PICK tiers only. Toggle "Include SKIPs" for all predictions.'
+            } Qualifying rounds excluded.
           </p>
         </>
       ) : (

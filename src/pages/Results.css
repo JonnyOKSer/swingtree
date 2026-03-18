@@ -79,6 +79,41 @@
   background: var(--serengeti-gold);
 }
 
+/* Filter Toggle */
+.results-filter {
+  margin-bottom: 24px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--serengeti-gold);
+  cursor: pointer;
+}
+
+.toggle-text {
+  font-size: 13px;
+  color: var(--ash-grey);
+  letter-spacing: 1px;
+  transition: color 0.2s ease;
+}
+
+.toggle-label:hover .toggle-text {
+  color: var(--flash-white);
+}
+
+.toggle-label input:checked + .toggle-text {
+  color: var(--serengeti-gold);
+}
+
 /* Tournament List */
 .tournament-list {
   width: 100%;

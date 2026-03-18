@@ -36,10 +36,14 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
   try {
     const pool = getPool()
+    const queryParams = event.queryStringParameters || {}
+
+    // Include SKIP tier when ?includeSkips=true
+    // Default: exclude SKIP from both match and first set stats for consistency
+    const includeSkips = queryParams.includeSkips === 'true'
+    const tierFilter = includeSkips ? "confidence_tier != 'VOID'" : "confidence_tier NOT IN ('SKIP', 'VOID')"
 
     // Get overall results by tour
-    // For match wins: exclude SKIP tier, only count PICK and above (STRONG, CONFIDENT, PICK, LEAN)
-    // For first set: include all tiers
     // Deduplicate by tournament+round+players to prevent same match from counting twice
     // Keep the prediction with highest confidence tier (lowest ordinal)
     const overallResult = await pool.query(`
@@ -68,12 +72,11 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       )
       SELECT
         COALESCE(tour, 'ATP') as tour,
-        COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) as total,
+        COUNT(*) FILTER (WHERE ${tierFilter}) as total,
         SUM(CASE WHEN (correct = true OR (correct IS NULL AND actual_winner = predicted_winner))
-                  AND confidence_tier NOT IN ('SKIP', 'VOID') THEN 1 ELSE 0 END) as match_wins,
-        -- First set stats: include ALL tiers (even SKIP) - different from match stats
-        COUNT(*) as first_set_total,
-        SUM(CASE WHEN first_set_score_correct = true THEN 1 ELSE 0 END) as first_set_wins
+                  AND ${tierFilter} THEN 1 ELSE 0 END) as match_wins,
+        COUNT(*) FILTER (WHERE ${tierFilter}) as first_set_total,
+        SUM(CASE WHEN first_set_score_correct = true AND ${tierFilter} THEN 1 ELSE 0 END) as first_set_wins
       FROM deduplicated
       GROUP BY COALESCE(tour, 'ATP')
     `)
@@ -150,12 +153,11 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         tournament,
         COALESCE(tour, 'ATP') as tour,
         EXTRACT(YEAR FROM MIN(prediction_date))::int as year,
-        COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) as match_total,
+        COUNT(*) FILTER (WHERE ${tierFilter}) as match_total,
         SUM(CASE WHEN (correct = true OR (correct IS NULL AND actual_winner = predicted_winner))
-                  AND confidence_tier NOT IN ('SKIP', 'VOID') THEN 1 ELSE 0 END) as match_wins,
-        -- First set stats: include ALL tiers (even SKIP) - different from match stats
-        COUNT(*) as first_set_total,
-        SUM(CASE WHEN first_set_score_correct = true THEN 1 ELSE 0 END) as first_set_wins
+                  AND ${tierFilter} THEN 1 ELSE 0 END) as match_wins,
+        COUNT(*) FILTER (WHERE ${tierFilter}) as first_set_total,
+        SUM(CASE WHEN first_set_score_correct = true AND ${tierFilter} THEN 1 ELSE 0 END) as first_set_wins
       FROM deduplicated
       GROUP BY tournament, COALESCE(tour, 'ATP')
       ORDER BY COUNT(*) DESC
@@ -253,7 +255,6 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     }
 
     // Debug mode: show raw and deduplicated predictions if ?debug=true
-    const queryParams = event.queryStringParameters || {}
     if (queryParams.debug === 'true') {
       const rawResult = await pool.query(`
         SELECT id, prediction_date, tour, tournament, round, player_a, player_b,
