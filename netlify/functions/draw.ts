@@ -445,12 +445,13 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
                 tier: getConfidenceTier(prediction.predicted_prob || 0.5),
                 correct: predictionCorrect
               } : undefined,
-              first_set: prediction?.first_set_score ? {
+              // Only show first_set if we have real data (first_set_winner populated)
+              first_set: (prediction?.first_set_score && prediction?.first_set_winner) ? {
                 predicted_winner: prediction.first_set_winner,
                 predicted_score: prediction.first_set_score,
                 tiebreak_pct: Math.round((prediction.first_set_tiebreak_prob || 0.15) * 100),
                 over_under: (prediction.first_set_over_9_5_prob || 0.5) > 0.5 ? 'Over 9.5' : 'Under 9.5',
-                divergence: prediction.first_set_winner !== prediction.predicted_winner,
+                divergence: Boolean(prediction.first_set_winner && prediction.predicted_winner && prediction.first_set_winner !== prediction.predicted_winner),
                 score_correct: prediction.first_set_score_correct === true
               } : undefined
             })
@@ -476,12 +477,14 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
                 confidence: prediction.predicted_prob || 0.5,
                 tier: getConfidenceTier(prediction.predicted_prob || 0.5)
               },
-              first_set: prediction.first_set_score ? {
+              // Only include first_set if we have REAL data (first_set_winner populated)
+              // Empty first_set_winner with "6-4" score is placeholder data - don't show
+              first_set: (prediction.first_set_score && prediction.first_set_winner) ? {
                 predicted_winner: fsWinner,
                 predicted_score: prediction.first_set_score,
                 tiebreak_pct: Math.round((prediction.first_set_tiebreak_prob || 0.15) * 100),
                 over_under: (prediction.first_set_over_9_5_prob || 0.5) > 0.5 ? 'Over 9.5' : 'Under 9.5',
-                divergence: fsWinner !== matchWinner
+                divergence: Boolean(fsWinner && matchWinner && fsWinner !== matchWinner)
               } : undefined
             })
           } else {
@@ -528,12 +531,13 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
                 tier: getConfidenceTier(prediction.predicted_prob || 0.5),
                 correct: prediction.correct
               },
-              first_set: prediction.first_set_score ? {
+              // Only show first_set if we have real data (first_set_winner populated)
+              first_set: (prediction.first_set_score && prediction.first_set_winner) ? {
                 predicted_winner: prediction.first_set_winner,
                 predicted_score: prediction.first_set_score,
                 tiebreak_pct: Math.round((prediction.first_set_tiebreak_prob || 0.15) * 100),
                 over_under: (prediction.first_set_over_9_5_prob || 0.5) > 0.5 ? 'Over 9.5' : 'Under 9.5',
-                divergence: prediction.first_set_winner !== prediction.predicted_winner,
+                divergence: Boolean(prediction.first_set_winner && prediction.predicted_winner && prediction.first_set_winner !== prediction.predicted_winner),
                 score_correct: prediction.first_set_score_correct === true
               } : undefined
             })
@@ -552,12 +556,14 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
                 confidence: prediction.predicted_prob || 0.5,
                 tier: getConfidenceTier(prediction.predicted_prob || 0.5)
               },
-              first_set: prediction.first_set_score ? {
+              // Only include first_set if we have REAL data (first_set_winner populated)
+              // Empty first_set_winner with "6-4" score is placeholder data - don't show
+              first_set: (prediction.first_set_score && prediction.first_set_winner) ? {
                 predicted_winner: fsWinner,
                 predicted_score: prediction.first_set_score,
                 tiebreak_pct: Math.round((prediction.first_set_tiebreak_prob || 0.15) * 100),
                 over_under: (prediction.first_set_over_9_5_prob || 0.5) > 0.5 ? 'Over 9.5' : 'Under 9.5',
-                divergence: fsWinner !== matchWinner
+                divergence: Boolean(fsWinner && matchWinner && fsWinner !== matchWinner)
               } : undefined
             })
           }
