@@ -71,10 +71,9 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) as total,
         SUM(CASE WHEN (correct = true OR (correct IS NULL AND actual_winner = predicted_winner))
                   AND confidence_tier NOT IN ('SKIP', 'VOID') THEN 1 ELSE 0 END) as match_wins,
-        -- First set stats: same filter as match stats for consistency
-        COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) as first_set_total,
-        SUM(CASE WHEN first_set_score_correct = true
-                  AND confidence_tier NOT IN ('SKIP', 'VOID') THEN 1 ELSE 0 END) as first_set_wins
+        -- First set stats: include ALL tiers (even SKIP) - different from match stats
+        COUNT(*) as first_set_total,
+        SUM(CASE WHEN first_set_score_correct = true THEN 1 ELSE 0 END) as first_set_wins
       FROM deduplicated
       GROUP BY COALESCE(tour, 'ATP')
     `)
@@ -154,10 +153,9 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) as match_total,
         SUM(CASE WHEN (correct = true OR (correct IS NULL AND actual_winner = predicted_winner))
                   AND confidence_tier NOT IN ('SKIP', 'VOID') THEN 1 ELSE 0 END) as match_wins,
-        -- First set stats: same filter as match stats for consistency
-        COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) as first_set_total,
-        SUM(CASE WHEN first_set_score_correct = true
-                  AND confidence_tier NOT IN ('SKIP', 'VOID') THEN 1 ELSE 0 END) as first_set_wins
+        -- First set stats: include ALL tiers (even SKIP) - different from match stats
+        COUNT(*) as first_set_total,
+        SUM(CASE WHEN first_set_score_correct = true THEN 1 ELSE 0 END) as first_set_wins
       FROM deduplicated
       GROUP BY tournament, COALESCE(tour, 'ATP')
       ORDER BY COUNT(*) DESC
