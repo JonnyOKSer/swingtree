@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import SubscriptionModal from '../components/SubscriptionModal'
-import AsheTicker, { MatchResult } from '../components/AsheTicker'
+import AsheTicker, { type MatchResult } from '../components/AsheTicker'
 import Footer from '../components/Footer'
 import './MainMenu.css'
 

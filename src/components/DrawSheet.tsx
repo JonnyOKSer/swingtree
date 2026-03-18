@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useFeatureAccess } from './TierGate'
-import AsheTicker, { MatchResult } from './AsheTicker'
+import AsheTicker, { type MatchResult } from './AsheTicker'
 import './DrawSheet.css'
 
 interface MatchSlot {
