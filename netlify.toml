@@ -14,9 +14,17 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# Scheduled function: Auto-reconcile every 10 minutes
+# Scheduled function: Auto-reconcile every 10 minutes (ESPN-based)
 [functions."auto-reconcile"]
   schedule = "*/10 * * * *"
+
+# Scheduled function: Sync draw data from api-tennis.com every 15 minutes
+[functions."sync-draw"]
+  schedule = "*/15 * * * *"
+
+# Scheduled function: Reconcile orphaned predictions every 15 minutes
+[functions."reconcile-predictions"]
+  schedule = "*/15 * * * *"
 
 # API routes
 [[redirects]]
