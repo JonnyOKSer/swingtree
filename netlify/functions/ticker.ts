@@ -193,24 +193,13 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
         new Date().toISOString()
     }})
 
-    // Debug: check prediction_log for today
-    const debugResult = await pool.query(`
-      SELECT tournament, round, player_a, player_b, tour
-      FROM prediction_log
-      WHERE prediction_date = CURRENT_DATE
-      LIMIT 5
-    `)
-
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
         matches,
-        count: matches.length,
-        debug: {
-          today_predictions: debugResult.rows
-        }
+        count: matches.length
       })
     }
   } catch (error) {
