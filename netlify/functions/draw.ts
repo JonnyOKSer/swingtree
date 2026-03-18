@@ -277,7 +277,13 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     console.log(`Found ${predictionsResult.rows.length} predictions for ${tournamentSlug} (${tour})`)
 
     // Determine draw size from tournament info
-    const drawSize = getDrawSize(tourneyLevel, tournamentInfo?.draw_size)
+    // WTA 1000 events (like Miami) are 128-draw, ATP Masters are 96-draw
+    let drawSize = getDrawSize(tourneyLevel, tournamentInfo?.draw_size)
+    if (tour === 'WTA' && tourneyLevel === 'M') {
+      drawSize = 128  // WTA 1000 events are 128-draw
+    } else if (tour === 'ATP' && tourneyLevel === 'M') {
+      drawSize = 96   // ATP Masters 1000 are 96-draw
+    }
     const config = ROUND_CONFIG[drawSize] || ROUND_CONFIG[32]
 
     // Step 4: Group predictions by round field (from prediction_log)
