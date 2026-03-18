@@ -167,9 +167,14 @@ function MatchCard({ match }: { match: MatchSlot }) {
       >
         <div className="match-header">
           {match.prediction && (
-            <span className={`result-badge ${predCorrect ? 'correct' : 'incorrect'}`}>
-              {predCorrect ? '✓' : '✗'}
-            </span>
+            <>
+              <span className={`tier-badge ${getTierClass(match.prediction.tier)}`}>
+                {getTierDisplay(match.prediction.tier)}
+              </span>
+              <span className={`result-badge ${predCorrect ? 'correct' : 'incorrect'}`}>
+                {predCorrect ? '✓' : '✗'}
+              </span>
+            </>
           )}
           {canViewDivergence && match.first_set?.divergence && (
             <span className="divergence-flag" data-tooltip="First set pick differs from match winner">⚡</span>

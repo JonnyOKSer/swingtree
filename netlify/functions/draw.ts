@@ -414,6 +414,24 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           if (drawMatch.status === 'finished' && drawMatch.winner_name) {
             // Completed match from draw
             const loser = drawMatch.winner_name === player1 ? player2 : player1
+
+            // Determine which player was predicted to win using last-name matching
+            let predictedWinnerDisplay = prediction?.predicted_winner
+            let predictionCorrect = prediction?.correct
+            if (prediction) {
+              const predWinnerLast = extractLastName(prediction.predicted_winner)
+              const player1Last = extractLastName(player1)
+              const player2Last = extractLastName(player2)
+              if (predWinnerLast === player1Last) {
+                predictedWinnerDisplay = player1
+              } else if (predWinnerLast === player2Last) {
+                predictedWinnerDisplay = player2
+              }
+              // Recalculate correct based on actual winner
+              const winnerLast = extractLastName(drawMatch.winner_name)
+              predictionCorrect = predWinnerLast === winnerLast
+            }
+
             matches.push({
               slot: slot + 1,
               status: 'completed',
@@ -422,10 +440,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
               winner: drawMatch.winner_name,
               score: drawMatch.final_result || undefined,
               prediction: prediction ? {
-                predicted_winner: prediction.predicted_winner,
+                predicted_winner: predictedWinnerDisplay,
                 confidence: prediction.predicted_prob || 0.5,
                 tier: getConfidenceTier(prediction.predicted_prob || 0.5),
-                correct: prediction.correct ?? (prediction.predicted_winner === drawMatch.winner_name)
+                correct: predictionCorrect
               } : undefined,
               first_set: prediction?.first_set_score ? {
                 predicted_winner: prediction.first_set_winner,
