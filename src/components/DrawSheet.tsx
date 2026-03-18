@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useFeatureAccess } from './TierGate'
+import AsheTicker, { MatchResult } from './AsheTicker'
 import './DrawSheet.css'
 
 interface MatchSlot {
@@ -290,10 +291,37 @@ export default function DrawSheet({
   const [drawData, setDrawData] = useState<DrawData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [tickerMatches, setTickerMatches] = useState<MatchResult[]>([])
   const bracketRef = useRef<HTMLDivElement>(null)
 
   // Tier-based access for legend
   const canViewDivergence = useFeatureAccess('divergence')
+
+  // Fetch ticker data filtered to this tournament
+  useEffect(() => {
+    const fetchTickerData = async () => {
+      try {
+        const response = await fetch('/api/ticker')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.matches) {
+            // Filter to this tournament by name
+            const filtered = data.matches.filter((m: MatchResult) =>
+              m.tournamentName.toLowerCase().includes(tournamentName.toLowerCase()) ||
+              tournamentName.toLowerCase().includes(m.tournamentShortName.toLowerCase())
+            )
+            setTickerMatches(filtered)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch ticker data:', error)
+      }
+    }
+
+    fetchTickerData()
+    const interval = setInterval(fetchTickerData, 120000)
+    return () => clearInterval(interval)
+  }, [tournamentName])
 
   useEffect(() => {
     const fetchDraw = async () => {
@@ -367,6 +395,14 @@ export default function DrawSheet({
           </div>
           <button className="close-draw" onClick={onClose}>×</button>
         </div>
+
+        {tickerMatches.length > 0 && (
+          <AsheTicker
+            matches={tickerMatches}
+            tournamentKey={drawData?.tournament?.id?.toString() || null}
+            position="inline"
+          />
+        )}
 
         <div className="draw-legend">
           <div className="legend-item">

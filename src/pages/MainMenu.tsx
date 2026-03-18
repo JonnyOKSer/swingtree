@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import SubscriptionModal from '../components/SubscriptionModal'
+import AsheTicker, { MatchResult } from '../components/AsheTicker'
 import Footer from '../components/Footer'
 import './MainMenu.css'
 
@@ -19,6 +20,29 @@ export default function MainMenu() {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'info' | 'warning'; message: string } | null>(null)
   const [processingSubscription, setProcessingSubscription] = useState(false)
+  const [tickerMatches, setTickerMatches] = useState<MatchResult[]>([])
+
+  // Fetch ticker data
+  useEffect(() => {
+    const fetchTickerData = async () => {
+      try {
+        const response = await fetch('/api/ticker')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.matches) {
+            setTickerMatches(data.matches)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch ticker data:', error)
+      }
+    }
+
+    fetchTickerData()
+    // Refresh ticker every 2 minutes
+    const interval = setInterval(fetchTickerData, 120000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Handle URL params for subscription status
   useEffect(() => {
@@ -138,6 +162,10 @@ export default function MainMenu() {
 
   return (
     <div className="main-menu">
+      {tickerMatches.length > 0 && (
+        <AsheTicker matches={tickerMatches} position="top" />
+      )}
+
       <h1 className="menu-wordmark serif">ASHE</h1>
 
       {notification && (
