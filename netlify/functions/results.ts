@@ -61,6 +61,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         WHERE actual_winner IS NOT NULL
           AND actual_winner NOT LIKE 'VOID%'
           AND EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+          AND (round IS NULL OR (round != 'Q' AND round !~ '^Q[0-9]*$'))
       ),
       deduplicated AS (
         SELECT * FROM ranked WHERE rn = 1
@@ -70,15 +71,15 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) as total,
         SUM(CASE WHEN (correct = true OR (correct IS NULL AND actual_winner = predicted_winner))
                   AND confidence_tier NOT IN ('SKIP', 'VOID') THEN 1 ELSE 0 END) as match_wins,
-        -- First set stats: exclude qualifying rounds (round = 'Q' or starts with 'Q' followed by digits)
-        COUNT(*) FILTER (WHERE round IS NULL OR (round != 'Q' AND round !~ '^Q[0-9]*$')) as first_set_total,
-        SUM(CASE WHEN first_set_score_correct = true
-                  AND (round IS NULL OR (round != 'Q' AND round !~ '^Q[0-9]*$')) THEN 1 ELSE 0 END) as first_set_wins
+        -- First set stats (qualifying already excluded in CTE)
+        COUNT(*) as first_set_total,
+        SUM(CASE WHEN first_set_score_correct = true THEN 1 ELSE 0 END) as first_set_wins
       FROM deduplicated
       GROUP BY COALESCE(tour, 'ATP')
     `)
 
     // Get results by tier (with deduplication by tournament+round+players)
+    // Exclude qualifying rounds - only main draw matches
     const tierResult = await pool.query(`
       WITH ranked AS (
         SELECT *,
@@ -98,6 +99,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         WHERE actual_winner IS NOT NULL
           AND actual_winner NOT LIKE 'VOID%'
           AND EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+          AND (round IS NULL OR (round != 'Q' AND round !~ '^Q[0-9]*$'))
       ),
       deduplicated AS (
         SELECT * FROM ranked WHERE rn = 1
@@ -119,6 +121,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     `)
 
     // Get results by tournament (with deduplication)
+    // Exclude qualifying rounds - only main draw matches
     const tournamentResult = await pool.query(`
       WITH ranked AS (
         SELECT *,
@@ -138,6 +141,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         WHERE actual_winner IS NOT NULL
           AND actual_winner NOT LIKE 'VOID%'
           AND EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+          AND (round IS NULL OR (round != 'Q' AND round !~ '^Q[0-9]*$'))
       ),
       deduplicated AS (
         SELECT * FROM ranked WHERE rn = 1
@@ -149,10 +153,9 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) as match_total,
         SUM(CASE WHEN (correct = true OR (correct IS NULL AND actual_winner = predicted_winner))
                   AND confidence_tier NOT IN ('SKIP', 'VOID') THEN 1 ELSE 0 END) as match_wins,
-        -- First set stats: exclude qualifying rounds
-        COUNT(*) FILTER (WHERE round IS NULL OR (round != 'Q' AND round !~ '^Q[0-9]*$')) as first_set_total,
-        SUM(CASE WHEN first_set_score_correct = true
-                  AND (round IS NULL OR (round != 'Q' AND round !~ '^Q[0-9]*$')) THEN 1 ELSE 0 END) as first_set_wins
+        -- First set stats (qualifying already excluded in CTE)
+        COUNT(*) as first_set_total,
+        SUM(CASE WHEN first_set_score_correct = true THEN 1 ELSE 0 END) as first_set_wins
       FROM deduplicated
       GROUP BY tournament, COALESCE(tour, 'ATP')
       ORDER BY COUNT(*) DESC
@@ -258,6 +261,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         FROM prediction_log
         WHERE actual_winner IS NOT NULL
           AND EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+          AND (round IS NULL OR (round != 'Q' AND round !~ '^Q[0-9]*$'))
         ORDER BY prediction_date DESC, id DESC
         LIMIT 50
       `)
@@ -281,13 +285,14 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           WHERE actual_winner IS NOT NULL
             AND actual_winner NOT LIKE 'VOID%'
             AND EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+            AND (round IS NULL OR (round != 'Q' AND round !~ '^Q[0-9]*$'))
         )
         SELECT id, prediction_date, tour, tournament, round, player_a, player_b,
                predicted_winner, actual_winner, confidence_tier, correct
         FROM ranked WHERE rn = 1
         ORDER BY prediction_date DESC, id DESC
       `)
-      // Tournament debug: show distinct tournaments and their null status
+      // Tournament debug: show distinct tournaments and their null status (main draw only)
       const tournamentDebug = await pool.query(`
         SELECT
           tournament,
@@ -296,6 +301,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           COUNT(*) FILTER (WHERE confidence_tier NOT IN ('SKIP', 'VOID')) as non_skip
         FROM prediction_log
         WHERE EXTRACT(YEAR FROM prediction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+          AND (round IS NULL OR (round != 'Q' AND round !~ '^Q[0-9]*$'))
         GROUP BY tournament
         ORDER BY total_predictions DESC
       `)
