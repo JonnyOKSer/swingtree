@@ -425,13 +425,20 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
             const fsWinner = prediction.first_set_winner
             const matchWinner = prediction.predicted_winner
 
+            // Determine which player (1 or 2) is predicted to win using last-name matching
+            const predWinnerLast = extractLastName(matchWinner)
+            const player1Last = extractLastName(player1)
+            const player2Last = extractLastName(player2)
+            const predictedWinnerSlot = predWinnerLast === player1Last ? 1 : predWinnerLast === player2Last ? 2 : 0
+
             matches.push({
               slot: slot + 1,
               status: 'predicted',
               player1,
               player2,
               prediction: {
-                predicted_winner: prediction.predicted_winner,
+                predicted_winner: predictedWinnerSlot === 1 ? player1 : predictedWinnerSlot === 2 ? player2 : prediction.predicted_winner,
+                predicted_winner_slot: predictedWinnerSlot,
                 confidence: prediction.predicted_prob || 0.5,
                 tier: prediction.confidence_tier || 'PICK'
               },
