@@ -1,0 +1,291 @@
+/* AsheTicker - ESPN-style results ticker */
+
+.ashe-ticker {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  height: 40px;
+  background: var(--charcoal);
+  overflow: hidden;
+}
+
+/* Position variants */
+.ticker-position-top {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.ticker-position-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+}
+
+/* Left label badge */
+.ticker-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0 16px;
+  background: var(--serengeti-gold);
+  flex-shrink: 0;
+  min-width: 70px;
+}
+
+.ticker-label-brand {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--charcoal);
+  line-height: 1.1;
+}
+
+.ticker-label-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--charcoal);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
+}
+
+/* Scroll area */
+.ticker-scroll-area {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+/* Fade masks */
+.ticker-fade-left,
+.ticker-fade-right {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.ticker-fade-left {
+  left: 0;
+  background: linear-gradient(to right, var(--charcoal) 0%, transparent 100%);
+}
+
+.ticker-fade-right {
+  right: 0;
+  background: linear-gradient(to left, var(--charcoal) 0%, transparent 100%);
+}
+
+/* Track (scrolling content) */
+.ticker-track {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  will-change: transform;
+}
+
+/* Individual item */
+.ticker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px;
+  white-space: nowrap;
+  border-right: 1px solid var(--charcoal-light);
+  height: 40px;
+}
+
+.ticker-item:last-child {
+  border-right: 1px solid var(--charcoal-light);
+}
+
+/* Tournament name (global mode only) */
+.ticker-tournament {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--ash-grey);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Tour badge */
+.ticker-tour {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--serengeti-gold);
+  text-transform: uppercase;
+}
+
+/* Round badge */
+.ticker-round {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--ash-grey);
+  background: var(--charcoal-light);
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+/* Live dot - pulsing red circle */
+.ticker-live-dot {
+  width: 6px;
+  height: 6px;
+  background: #e05555;
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.85);
+  }
+}
+
+/* Player names */
+.ticker-winner {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--serengeti-gold);
+}
+
+.ticker-loser {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 400;
+  color: #f0ece0;
+}
+
+.ticker-player {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 400;
+  color: #f0ece0;
+}
+
+.ticker-def,
+.ticker-vs {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--ash-grey);
+}
+
+/* Score */
+.ticker-score {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ash-grey);
+}
+
+/* Live tag */
+.ticker-live-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  color: #e05555;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Indicator emoji */
+.ticker-indicator {
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* Pause button */
+.ticker-pause-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--charcoal-light);
+  border: none;
+  cursor: pointer;
+  color: var(--ash-grey);
+  flex-shrink: 0;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.ticker-pause-btn:hover {
+  color: var(--flash-white);
+  background: #333;
+}
+
+.ticker-pause-btn:active {
+  background: #3a3a3a;
+}
+
+.ticker-pause-btn svg {
+  display: block;
+}
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+  .ashe-ticker {
+    height: 36px;
+  }
+
+  .ticker-label {
+    padding: 0 12px;
+    min-width: 60px;
+  }
+
+  .ticker-label-brand {
+    font-size: 11px;
+  }
+
+  .ticker-label-sub {
+    font-size: 8px;
+    max-width: 60px;
+  }
+
+  .ticker-item {
+    padding: 0 14px;
+    gap: 6px;
+    height: 36px;
+  }
+
+  .ticker-winner,
+  .ticker-loser,
+  .ticker-player {
+    font-size: 11px;
+  }
+
+  .ticker-score {
+    font-size: 10px;
+  }
+
+  .ticker-pause-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .ticker-fade-left,
+  .ticker-fade-right {
+    width: 24px;
+  }
+}
