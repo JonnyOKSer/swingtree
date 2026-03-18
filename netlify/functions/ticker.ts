@@ -125,15 +125,18 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
         pl.predicted_winner
       FROM draw_matches dm
       LEFT JOIN prediction_log pl ON (
-        LOWER(dm.tournament_name) = LOWER(pl.tournament)
+        -- Tournament name fuzzy match (either contains the other)
+        (LOWER(dm.tournament_name) LIKE '%' || LOWER(SPLIT_PART(pl.tournament, ' ', 1)) || '%'
+         OR LOWER(pl.tournament) LIKE '%' || LOWER(dm.tournament_name) || '%')
         AND dm.round_normalized = pl.round
-        AND dm.tour = pl.tour
+        AND COALESCE(dm.tour, 'ATP') = COALESCE(pl.tour, 'ATP')
+        -- Player last name matching (handles "S. Kenin" vs "Sofia Kenin")
         AND (
-          (LOWER(dm.player_1_name) LIKE '%' || LOWER(SPLIT_PART(pl.player_a, ' ', -1)) || '%'
-           AND LOWER(dm.player_2_name) LIKE '%' || LOWER(SPLIT_PART(pl.player_b, ' ', -1)) || '%')
+          (LOWER(dm.player_1_name) LIKE '%' || LOWER(REGEXP_REPLACE(pl.player_a, '^.* ', '')) || '%'
+           AND LOWER(dm.player_2_name) LIKE '%' || LOWER(REGEXP_REPLACE(pl.player_b, '^.* ', '')) || '%')
           OR
-          (LOWER(dm.player_1_name) LIKE '%' || LOWER(SPLIT_PART(pl.player_b, ' ', -1)) || '%'
-           AND LOWER(dm.player_2_name) LIKE '%' || LOWER(SPLIT_PART(pl.player_a, ' ', -1)) || '%')
+          (LOWER(dm.player_1_name) LIKE '%' || LOWER(REGEXP_REPLACE(pl.player_b, '^.* ', '')) || '%'
+           AND LOWER(dm.player_2_name) LIKE '%' || LOWER(REGEXP_REPLACE(pl.player_a, '^.* ', '')) || '%')
         )
       )
       WHERE dm.scheduled_date = CURRENT_DATE
