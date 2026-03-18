@@ -116,7 +116,7 @@ async function syncDrawFromFixtures(fixtures: ApiTennisFixture[]): Promise<SyncR
   }
 
   // Process each tournament
-  for (const [tournamentKey, tournamentFixtures] of byTournament) {
+  for (const [tournamentKey, tournamentFixtures] of Array.from(byTournament.entries())) {
     const result: SyncResult = {
       tournament_key: tournamentKey,
       tournament_name: tournamentFixtures[0]?.tournament_name ?? "Unknown",
