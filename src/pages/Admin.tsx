@@ -23,6 +23,31 @@ interface AccessCode {
   intendedFor: string | null
 }
 
+interface TierStats {
+  tier: string
+  total: number
+  correct: number
+  incorrect: number
+  accuracy: number
+}
+
+interface AccuracyStats {
+  byTier: TierStats[]
+  overall: {
+    total: number
+    correct: number
+    incorrect: number
+    accuracy: number
+  }
+  firstSet: {
+    total: number
+    correct: number
+    accuracy: number
+  }
+  pending: number
+  voided: number
+}
+
 export default function Admin() {
   const navigate = useNavigate()
   const { user, loading, isAuthenticated } = useAuth()
@@ -74,6 +99,10 @@ export default function Admin() {
   // User search filter
   const [userSearch, setUserSearch] = useState('')
 
+  // Accuracy stats
+  const [accuracyStats, setAccuracyStats] = useState<AccuracyStats | null>(null)
+  const [loadingAccuracy, setLoadingAccuracy] = useState(false)
+
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       navigate('/')
@@ -86,6 +115,7 @@ export default function Admin() {
     if (user?.isAdmin) {
       fetchUsers()
       checkSystemHealth()
+      fetchAccuracyStats()
     }
   }, [user])
 
@@ -106,8 +136,25 @@ export default function Admin() {
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    await Promise.all([fetchUsers(), checkSystemHealth()])
+    await Promise.all([fetchUsers(), checkSystemHealth(), fetchAccuracyStats()])
     setRefreshing(false)
+  }
+
+  const fetchAccuracyStats = async () => {
+    setLoadingAccuracy(true)
+    try {
+      const response = await fetch('/api/accuracy-stats')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setAccuracyStats(data.stats)
+        }
+      }
+    } catch {
+      console.error('Failed to fetch accuracy stats')
+    } finally {
+      setLoadingAccuracy(false)
+    }
   }
 
   const fetchUsers = async () => {
@@ -341,6 +388,81 @@ export default function Admin() {
           </button>
         </div>
       )}
+
+      {/* Prediction Accuracy Stats */}
+      <section className="admin-section accuracy-section">
+        <div className="accuracy-header">
+          <h2>Prediction Accuracy</h2>
+          <button
+            className="refresh-btn small"
+            onClick={fetchAccuracyStats}
+            disabled={loadingAccuracy}
+            title="Refresh accuracy stats"
+          >
+            {loadingAccuracy ? '↻' : '⟳'}
+          </button>
+        </div>
+
+        {loadingAccuracy && !accuracyStats ? (
+          <p>Loading stats...</p>
+        ) : accuracyStats ? (
+          <div className="accuracy-content">
+            {/* Overall Stats Row */}
+            <div className="accuracy-overview">
+              <div className="accuracy-stat-box">
+                <span className="accuracy-value">{accuracyStats.overall.correct}/{accuracyStats.overall.total}</span>
+                <span className="accuracy-label">Match Winner</span>
+                <span className="accuracy-pct">{accuracyStats.overall.accuracy}%</span>
+              </div>
+              <div className="accuracy-stat-box">
+                <span className="accuracy-value">{accuracyStats.firstSet.correct}/{accuracyStats.firstSet.total}</span>
+                <span className="accuracy-label">First Set Score</span>
+                <span className="accuracy-pct">{accuracyStats.firstSet.accuracy}%</span>
+              </div>
+              <div className="accuracy-stat-box secondary">
+                <span className="accuracy-value">{accuracyStats.pending}</span>
+                <span className="accuracy-label">Pending</span>
+              </div>
+              <div className="accuracy-stat-box secondary">
+                <span className="accuracy-value">{accuracyStats.voided}</span>
+                <span className="accuracy-label">Voided</span>
+              </div>
+            </div>
+
+            {/* By Tier Table */}
+            <div className="accuracy-table-wrapper">
+              <table className="accuracy-table">
+                <thead>
+                  <tr>
+                    <th>Tier</th>
+                    <th>Total</th>
+                    <th>Correct</th>
+                    <th>Incorrect</th>
+                    <th>Accuracy</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accuracyStats.byTier.map(tier => (
+                    <tr key={tier.tier} className={`tier-row tier-${tier.tier.toLowerCase()}`}>
+                      <td>
+                        <span className={`tier-badge tier-${tier.tier.toLowerCase()}`}>
+                          {tier.tier}
+                        </span>
+                      </td>
+                      <td>{tier.total}</td>
+                      <td className="correct">{tier.correct}</td>
+                      <td className="incorrect">{tier.incorrect}</td>
+                      <td className="accuracy">{tier.accuracy}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <p>No stats available</p>
+        )}
+      </section>
 
       <div className="admin-grid">
         {/* Generate Code */}
