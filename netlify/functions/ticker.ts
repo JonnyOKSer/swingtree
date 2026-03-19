@@ -96,15 +96,17 @@ function determineIndicator(
 ): '✅' | '❌' | '🌳' | '⚡' | '' {
   if (!prediction) return ''
 
-  // First set score correct gets tree (highest priority)
-  if (prediction.first_set_score_correct) return '🌳'
-
-  // Divergence - predicted first set winner differs from match winner
-  if (prediction.divergence) return '⚡'
-
-  // Match prediction result
-  if (prediction.correct === true) return '✅'
+  // Match prediction result is primary indicator
+  // Tree (🌳) only shows when match prediction is ALSO correct
+  if (prediction.correct === true) {
+    // Correct match + correct first set score = tree
+    if (prediction.first_set_score_correct) return '🌳'
+    return '✅'
+  }
   if (prediction.correct === false) return '❌'
+
+  // Divergence shown only if match result not yet known
+  if (prediction.divergence) return '⚡'
 
   return ''
 }
