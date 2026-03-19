@@ -54,6 +54,39 @@ interface AccuracyStats {
   lastReconciliation: string | null
 }
 
+interface WageringInsight {
+  id: string
+  timestamp: string
+  tournament: string | null
+  type: 'parlay' | 'single' | 'round_pattern' | 'tier_pattern'
+  predictionType: string
+  description: string
+  winRate: number
+  sampleSize: number
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW'
+}
+
+interface WageringAnalysis {
+  generatedAt: string
+  totalPredictions: number
+  dateRange: { start: string; end: string } | null
+  insights: WageringInsight[]
+  roundPatterns: {
+    round: string
+    matchWinner: number | null
+    firstSetWinner: number | null
+    firstSetScore: number | null
+    total: number
+  }[]
+  tierPatterns: {
+    tier: string
+    matchWinRate: number
+    fsWinnerRate: number
+    fsScoreRate: number
+    total: number
+  }[]
+}
+
 export default function Admin() {
   const navigate = useNavigate()
   const { user, loading, isAuthenticated } = useAuth()
@@ -109,6 +142,10 @@ export default function Admin() {
   const [accuracyStats, setAccuracyStats] = useState<AccuracyStats | null>(null)
   const [loadingAccuracy, setLoadingAccuracy] = useState(false)
 
+  // Wagering strategies
+  const [wageringInsights, setWageringInsights] = useState<WageringAnalysis | null>(null)
+  const [loadingWagering, setLoadingWagering] = useState(false)
+
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       navigate('/')
@@ -160,6 +197,23 @@ export default function Admin() {
       console.error('Failed to fetch accuracy stats')
     } finally {
       setLoadingAccuracy(false)
+    }
+  }
+
+  const fetchWageringInsights = async () => {
+    setLoadingWagering(true)
+    try {
+      const response = await fetch('/api/wagering-strategies?days=30')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setWageringInsights(data.analysis)
+        }
+      }
+    } catch {
+      console.error('Failed to fetch wagering insights')
+    } finally {
+      setLoadingWagering(false)
     }
   }
 
@@ -623,6 +677,127 @@ export default function Admin() {
                   View tweet →
                 </a>
               </p>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Wagering Strategy Insights */}
+      <section className="admin-section wagering-section">
+        <div className="wagering-header">
+          <h2>Wagering Strategy Insights</h2>
+          <button
+            className="trigger-btn"
+            onClick={fetchWageringInsights}
+            disabled={loadingWagering}
+          >
+            {loadingWagering ? 'Generating...' : 'Generate Insights'}
+          </button>
+        </div>
+
+        {wageringInsights && (
+          <div className="wagering-content">
+            <p className="wagering-meta">
+              Generated: {new Date(wageringInsights.generatedAt).toLocaleString()} •
+              {wageringInsights.totalPredictions} predictions analyzed
+              {wageringInsights.dateRange && (
+                <> • {new Date(wageringInsights.dateRange.start).toLocaleDateString()} - {new Date(wageringInsights.dateRange.end).toLocaleDateString()}</>
+              )}
+            </p>
+
+            {/* Insights Feed */}
+            {wageringInsights.insights.length > 0 && (
+              <div className="insights-feed">
+                <h3>Top Insights</h3>
+                {wageringInsights.insights.slice(0, 10).map(insight => (
+                  <div key={insight.id} className={`insight-item ${insight.type} ${insight.confidence.toLowerCase()}`}>
+                    <div className="insight-header">
+                      <span className={`insight-type ${insight.type}`}>
+                        {insight.type === 'round_pattern' ? '📊' :
+                         insight.type === 'tier_pattern' ? '🎯' :
+                         insight.type === 'parlay' ? '🔗' : '📈'}
+                        {insight.type.replace('_', ' ')}
+                      </span>
+                      <span className={`insight-confidence ${insight.confidence.toLowerCase()}`}>
+                        {insight.confidence}
+                      </span>
+                    </div>
+                    <p className="insight-description">{insight.description}</p>
+                    <div className="insight-meta">
+                      <span className="insight-rate">{(insight.winRate * 100).toFixed(1)}%</span>
+                      <span className="insight-sample">n={insight.sampleSize}</span>
+                      {insight.tournament && (
+                        <span className="insight-tournament">{insight.tournament}</span>
+                      )}
+                      {insight.timestamp && (
+                        <span className="insight-time">{new Date(insight.timestamp).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Round Patterns Table */}
+            {wageringInsights.roundPatterns.length > 0 && (
+              <div className="round-patterns">
+                <h3>Accuracy by Round</h3>
+                <table className="patterns-table">
+                  <thead>
+                    <tr>
+                      <th>Round</th>
+                      <th>Match</th>
+                      <th>FS Winner</th>
+                      <th>FS Score</th>
+                      <th>n</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {wageringInsights.roundPatterns.map(rp => (
+                      <tr key={rp.round}>
+                        <td>{rp.round}</td>
+                        <td>{rp.matchWinner !== null ? `${(rp.matchWinner * 100).toFixed(1)}%` : '-'}</td>
+                        <td>{rp.firstSetWinner !== null ? `${(rp.firstSetWinner * 100).toFixed(1)}%` : '-'}</td>
+                        <td>{rp.firstSetScore !== null ? `${(rp.firstSetScore * 100).toFixed(1)}%` : '-'}</td>
+                        <td>{rp.total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Tier Patterns Table */}
+            {wageringInsights.tierPatterns.length > 0 && (
+              <div className="tier-patterns">
+                <h3>Accuracy by Tier</h3>
+                <table className="patterns-table">
+                  <thead>
+                    <tr>
+                      <th>Tier</th>
+                      <th>Match</th>
+                      <th>FS Winner</th>
+                      <th>FS Score</th>
+                      <th>n</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {wageringInsights.tierPatterns.map(tp => (
+                      <tr key={tp.tier} className={`tier-row tier-${tp.tier.toLowerCase()}`}>
+                        <td><span className={`tier-badge tier-${tp.tier.toLowerCase()}`}>{tp.tier}</span></td>
+                        <td>{(tp.matchWinRate * 100).toFixed(1)}%</td>
+                        <td>{(tp.fsWinnerRate * 100).toFixed(1)}%</td>
+                        <td>{(tp.fsScoreRate * 100).toFixed(1)}%</td>
+                        <td>{tp.total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {wageringInsights.insights.length === 0 && (
+              <p className="no-insights">No significant patterns found. Need more reconciled predictions.</p>
             )}
           </div>
         )}

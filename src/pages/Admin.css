@@ -666,3 +666,169 @@
     min-width: auto;
   }
 }
+
+/* Wagering Strategy Section */
+.wagering-section {
+  margin-bottom: 32px;
+}
+
+.wagering-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.wagering-header h2 {
+  margin: 0;
+}
+
+.wagering-header .trigger-btn {
+  border-color: var(--serengeti-gold);
+  color: var(--serengeti-gold);
+}
+
+.wagering-header .trigger-btn:hover:not(:disabled) {
+  background: var(--serengeti-gold);
+  color: var(--obsidian);
+}
+
+.wagering-meta {
+  font-size: 12px;
+  color: var(--ash-grey);
+  margin: 0 0 20px 0;
+}
+
+.wagering-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Insights Feed */
+.insights-feed h3,
+.round-patterns h3,
+.tier-patterns h3 {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ash-grey);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 0 12px 0;
+}
+
+.insight-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  padding: 12px 16px;
+  margin-bottom: 8px;
+}
+
+.insight-item.high {
+  border-left: 3px solid var(--serengeti-gold);
+}
+
+.insight-item.medium {
+  border-left: 3px solid #64b5f6;
+}
+
+.insight-item.low {
+  border-left: 3px solid var(--ash-grey);
+}
+
+.insight-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.insight-type {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--ash-grey);
+}
+
+.insight-type.round_pattern { color: #64b5f6; }
+.insight-type.tier_pattern { color: var(--serengeti-gold); }
+.insight-type.parlay { color: #81c784; }
+.insight-type.single { color: var(--ash-grey); }
+
+.insight-confidence {
+  font-size: 9px;
+  padding: 2px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.insight-confidence.high {
+  background: rgba(196, 151, 59, 0.2);
+  color: var(--serengeti-gold);
+}
+
+.insight-confidence.medium {
+  background: rgba(100, 181, 246, 0.2);
+  color: #64b5f6;
+}
+
+.insight-confidence.low {
+  background: rgba(128, 128, 128, 0.2);
+  color: var(--ash-grey);
+}
+
+.insight-description {
+  font-size: 13px;
+  color: var(--flash-white);
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+}
+
+.insight-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--ash-grey);
+}
+
+.insight-rate {
+  color: var(--serengeti-gold);
+  font-weight: 500;
+}
+
+.insight-tournament {
+  color: #64b5f6;
+}
+
+/* Patterns Tables */
+.patterns-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.patterns-table th,
+.patterns-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+.patterns-table th {
+  color: var(--ash-grey);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 10px;
+}
+
+.patterns-table td {
+  color: var(--flash-white);
+}
+
+.no-insights {
+  font-size: 13px;
+  color: var(--ash-grey);
+  text-align: center;
+  padding: 24px;
+}
