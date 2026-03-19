@@ -13,7 +13,8 @@ export interface MatchResult {
   winnerName: string | null
   score: string
   isLive: boolean
-  indicator: '✅' | '❌' | '🌳' | '⚡' | ''
+  indicator: '✅' | '❌' | '⚡' | ''
+  showTree?: boolean
   scheduledAt: string
   firstSet?: {
     predictedScore: string | null
@@ -69,8 +70,10 @@ function TickerItem({ match, showTournament }: { match: MatchResult; showTournam
 
       {match.isLive && <span className="ticker-live-tag">LIVE</span>}
 
-      {match.indicator && (
-        <span className="ticker-indicator">{match.indicator}</span>
+      {(match.indicator || match.showTree) && (
+        <span className="ticker-indicator">
+          {match.indicator}{match.showTree && '🌳'}
+        </span>
       )}
     </div>
   )
@@ -99,19 +102,23 @@ function TickerHelp({ onClose }: { onClose: () => void }) {
           <div className="ticker-help-grid">
             <div className="ticker-help-item">
               <span className="ticker-indicator">✅</span>
-              <span>Correct prediction</span>
+              <span>Correct match prediction</span>
             </div>
             <div className="ticker-help-item">
               <span className="ticker-indicator">❌</span>
-              <span>Incorrect prediction</span>
+              <span>Incorrect match prediction</span>
             </div>
             <div className="ticker-help-item">
-              <span className="ticker-indicator">🌳</span>
-              <span>Exact 1st set score hit</span>
+              <span className="ticker-indicator">✅🌳</span>
+              <span>Correct + exact 1st set score</span>
+            </div>
+            <div className="ticker-help-item">
+              <span className="ticker-indicator">❌🌳</span>
+              <span>Incorrect + exact 1st set score</span>
             </div>
             <div className="ticker-help-item">
               <span className="ticker-indicator">⚡</span>
-              <span>Divergence (1st set ≠ match)</span>
+              <span>Pending (divergence predicted)</span>
             </div>
           </div>
         </div>

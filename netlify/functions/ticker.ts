@@ -24,7 +24,8 @@ interface TickerMatch {
   winnerName: string | null
   score: string
   isLive: boolean
-  indicator: '✅' | '❌' | '🌳' | '⚡' | ''
+  indicator: '✅' | '❌' | '⚡' | ''
+  showTree: boolean  // First set score correct (shown separately)
   scheduledAt: string
   firstSet?: {
     predictedScore: string | null
@@ -91,24 +92,22 @@ function inferWinnerFromScore(
   return null
 }
 
-function determineIndicator(
+function determineIndicators(
   prediction: { correct?: boolean; first_set_score_correct?: boolean; divergence?: boolean } | null
-): '✅' | '❌' | '🌳' | '⚡' | '' {
-  if (!prediction) return ''
+): { match: '✅' | '❌' | '⚡' | ''; tree: boolean } {
+  if (!prediction) return { match: '', tree: false }
 
-  // Match prediction result is primary indicator
-  // Tree (🌳) only shows when match prediction is ALSO correct
-  if (prediction.correct === true) {
-    // Correct match + correct first set score = tree
-    if (prediction.first_set_score_correct) return '🌳'
-    return '✅'
-  }
-  if (prediction.correct === false) return '❌'
+  // Tree shows when first set score is correct (independent of match result)
+  const tree = prediction.first_set_score_correct === true
+
+  // Match result indicator
+  if (prediction.correct === true) return { match: '✅', tree }
+  if (prediction.correct === false) return { match: '❌', tree }
 
   // Divergence shown only if match result not yet known
-  if (prediction.divergence) return '⚡'
+  if (prediction.divergence) return { match: '⚡', tree }
 
-  return ''
+  return { match: '', tree }
 }
 
 const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
@@ -206,11 +205,14 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
       winnerName,
       score: formatScoreWinnerFirst(row.score, row.player_1_name, row.player_2_name, winnerName),
       isLive,
-      indicator: winnerName ? determineIndicator({
-        correct: row.correct,
-        first_set_score_correct: row.first_set_score_correct,
-        divergence: Boolean(row.first_set_winner && row.predicted_winner && row.first_set_winner !== row.predicted_winner)
-      }) : '',
+      ...(() => {
+        const indicators = winnerName ? determineIndicators({
+          correct: row.correct,
+          first_set_score_correct: row.first_set_score_correct,
+          divergence: Boolean(row.first_set_winner && row.predicted_winner && row.first_set_winner !== row.predicted_winner)
+        }) : { match: '', tree: false }
+        return { indicator: indicators.match, showTree: indicators.tree }
+      })(),
       scheduledAt: row.scheduled_date ?
         `${row.scheduled_date}T${row.scheduled_time || '00:00'}:00Z` :
         new Date().toISOString(),
