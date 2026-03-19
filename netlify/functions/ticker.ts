@@ -158,10 +158,11 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
            AND LOWER(dm.player_2_name) LIKE '%' || LOWER(REGEXP_REPLACE(pl.player_a, '^.* ', '')) || '%')
         )
       )
-      WHERE dm.scheduled_date = CURRENT_DATE
+      WHERE dm.scheduled_date >= CURRENT_DATE - INTERVAL '1 day'
         AND dm.status IN ('finished', 'live')
         ${tournamentKeyFilter ? 'AND dm.tournament_key::text = $1' : ''}
       ORDER BY
+        dm.scheduled_date DESC,
         CASE dm.status WHEN 'live' THEN 0 ELSE 1 END,
         dm.scheduled_time DESC NULLS LAST,
         dm.round_normalized
