@@ -399,8 +399,8 @@
 
 .ticker-help-item .ticker-indicator {
   font-size: 14px;
-  width: 20px;
-  text-align: center;
+  min-width: 36px;
+  text-align: left;
 }
 
 .ticker-help-item .ticker-first-set {
