@@ -10,8 +10,8 @@ const FAQ_ITEMS = [
     answer: "ASHE uses a proprietary ELO-based model that analyzes historical match data, surface performance, head-to-head records, and recent form. The model processes 364,000+ professional tennis matches to identify statistical patterns that predict match outcomes."
   },
   {
-    question: "What do STRONG, CONFIDENT, PICK, and SKIP mean?",
-    answer: "These are confidence tiers. STRONG indicates the highest conviction picks with historically 85%+ accuracy. CONFIDENT shows solid edges. PICK represents standard predictions worth considering. SKIP means the model sees no clear edge and recommends passing on the match."
+    question: "What do the confidence tiers mean?",
+    answer: "STRONG (90%+): Highest conviction picks. CONFIDENT (80-89%): Solid edges. PICK (70-79%): Standard predictions worth considering. LEAN (60-69%): Slight edge detected. SKIP (<60%): No clear edge, pass recommended."
   },
   {
     question: "How many matches is the model trained on?",
@@ -226,8 +226,8 @@ export default function Results() {
           </div>
           <p className="results-note">
             Activation Date: March 13 2026. {includeSkips
-              ? 'Showing all tiers including SKIP.'
-              : 'Showing STRONG, CONFIDENT, PICK tiers only. Toggle "Include SKIPs" for all predictions.'
+              ? 'Showing all tiers including LEAN and SKIP.'
+              : 'Showing STRONG, CONFIDENT, PICK tiers only. Toggle "Include SKIPs" to see LEAN and SKIP predictions.'
             } Qualifying rounds excluded.
           </p>
         </>

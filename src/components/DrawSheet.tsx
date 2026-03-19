@@ -97,16 +97,13 @@ function MatchCard({ match }: { match: MatchSlot }) {
       case 'STRONG': return 'tier-strong'
       case 'CONFIDENT': return 'tier-confident'
       case 'PICK': return 'tier-pick'
-      case 'LEAN': return 'tier-pick'  // Consolidated into PICK
+      case 'LEAN': return 'tier-lean'
       case 'SKIP': return 'tier-skip'
       default: return ''
     }
   }
 
-  const getTierDisplay = (tier?: string) => {
-    // Display LEAN as PICK since they're consolidated
-    return tier === 'LEAN' ? 'PICK' : tier
-  }
+  const getTierDisplay = (tier?: string) => tier
 
   const formatConfidence = (conf: number) => Math.round(conf * 100)
 
@@ -428,19 +425,23 @@ export default function DrawSheet({
         <div className="draw-legend">
           <div className="legend-item">
             <span className="legend-box tier-strong" />
-            <span>STRONG</span>
+            <span>STRONG (90%+)</span>
           </div>
           <div className="legend-item">
             <span className="legend-box tier-confident" />
-            <span>CONFIDENT</span>
+            <span>CONFIDENT (80-89%)</span>
           </div>
           <div className="legend-item">
             <span className="legend-box tier-pick" />
-            <span>PICK</span>
+            <span>PICK (70-79%)</span>
+          </div>
+          <div className="legend-item">
+            <span className="legend-box tier-lean" />
+            <span>LEAN (60-69%)</span>
           </div>
           <div className="legend-item">
             <span className="legend-box tier-skip" />
-            <span>SKIP</span>
+            <span>SKIP (&lt;60%)</span>
           </div>
           {canViewDivergence && (
             <div className="legend-item legend-tooltip" data-tooltip="Predicted winner will lose first set">
