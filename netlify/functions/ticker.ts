@@ -128,8 +128,9 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
 
     // Query for today's matches from draw_matches joined with predictions
     // Include both completed and live matches
+    // Use DISTINCT ON to prevent duplicates when multiple predictions match
     const result = await pool.query(`
-      SELECT
+      SELECT DISTINCT ON (dm.match_key)
         dm.match_key,
         dm.tour,
         dm.round_normalized as round,
@@ -167,13 +168,27 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
         AND dm.status IN ('finished', 'live')
         ${tournamentKeyFilter ? 'AND dm.tournament_key::text = $1' : ''}
       ORDER BY
-        dm.scheduled_date DESC,
-        CASE dm.status WHEN 'live' THEN 0 ELSE 1 END,
-        dm.scheduled_time DESC NULLS LAST,
-        dm.round_normalized
+        dm.match_key,
+        pl.prediction_date DESC NULLS LAST
     `, tournamentKeyFilter ? [tournamentKeyFilter] : [])
 
-    const matches: TickerMatch[] = result.rows.map(row => {
+    // Re-sort after DISTINCT ON (which requires ORDER BY match_key first)
+    const sortedRows = result.rows.sort((a, b) => {
+      // Live matches first
+      if (a.status === 'live' && b.status !== 'live') return -1
+      if (b.status === 'live' && a.status !== 'live') return 1
+      // Then by date descending
+      if (a.scheduled_date > b.scheduled_date) return -1
+      if (a.scheduled_date < b.scheduled_date) return 1
+      // Then by time descending
+      if (a.scheduled_time && b.scheduled_time) {
+        if (a.scheduled_time > b.scheduled_time) return -1
+        if (a.scheduled_time < b.scheduled_time) return 1
+      }
+      return 0
+    })
+
+    const matches: TickerMatch[] = sortedRows.map(row => {
       const isLive = row.status === 'live'
       const winnerName = inferWinnerFromScore(row.score, row.player_1_name, row.player_2_name, row.winner_name, isLive)
 

@@ -76,6 +76,69 @@ function TickerItem({ match, showTournament }: { match: MatchResult; showTournam
   )
 }
 
+function TickerHelp({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="ticker-help-overlay" onClick={onClose}>
+      <div className="ticker-help-content" onClick={e => e.stopPropagation()}>
+        <button className="ticker-help-close" onClick={onClose}>×</button>
+        <h3>ASHE Tracker Feed</h3>
+
+        <div className="ticker-help-section">
+          <h4>Match Format</h4>
+          <p><span className="ticker-help-example">
+            <span className="ticker-tour">ATP</span>
+            <span className="ticker-round">R32</span>
+            <span className="ticker-winner">Winner</span>
+            <span className="ticker-def">def.</span>
+            <span className="ticker-loser">Loser</span>
+          </span></p>
+        </div>
+
+        <div className="ticker-help-section">
+          <h4>Result Indicators</h4>
+          <div className="ticker-help-grid">
+            <div className="ticker-help-item">
+              <span className="ticker-indicator">✅</span>
+              <span>Correct prediction</span>
+            </div>
+            <div className="ticker-help-item">
+              <span className="ticker-indicator">❌</span>
+              <span>Incorrect prediction</span>
+            </div>
+            <div className="ticker-help-item">
+              <span className="ticker-indicator">🌳</span>
+              <span>Exact 1st set score hit</span>
+            </div>
+            <div className="ticker-help-item">
+              <span className="ticker-indicator">⚡</span>
+              <span>Divergence (1st set ≠ match)</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="ticker-help-section">
+          <h4>First Set Predictions</h4>
+          <div className="ticker-help-grid">
+            <div className="ticker-help-item">
+              <span className="ticker-first-set winner-won-fs">FS 6-4</span>
+              <span>Match winner won 1st set</span>
+            </div>
+            <div className="ticker-help-item">
+              <span className="ticker-first-set divergence">FS 6-4<span className="fs-bolt">⚡</span></span>
+              <span>Match winner lost 1st set</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="ticker-help-section">
+          <h4>Controls</h4>
+          <p>Hover to pause • Click ⏸ to toggle • Click ℹ for this help</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function AsheTicker({
   matches,
   tournamentKey = null,
@@ -84,6 +147,7 @@ function AsheTicker({
 }: AsheTickerProps) {
   const [isPaused, setIsPaused] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const trackRef = useRef<HTMLDivElement>(null)
   const animationRef = useRef<number | null>(null)
@@ -194,23 +258,38 @@ function AsheTicker({
         <div className="ticker-fade-right" />
       </div>
 
-      {/* Pause button */}
-      <button
-        className="ticker-pause-btn"
-        onClick={() => setIsPaused(!isPaused)}
-        aria-label={isPaused ? 'Resume ticker' : 'Pause ticker'}
-      >
-        {isPaused ? (
+      {/* Control buttons */}
+      <div className="ticker-controls">
+        <button
+          className="ticker-help-btn"
+          onClick={() => setShowHelp(true)}
+          aria-label="Show ticker help"
+        >
           <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-            <path d="M8 5v14l11-7z" />
+            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2"/>
+            <text x="12" y="16" textAnchor="middle" fontSize="12" fill="currentColor">i</text>
           </svg>
-        ) : (
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-            <rect x="6" y="4" width="4" height="16" />
-            <rect x="14" y="4" width="4" height="16" />
-          </svg>
-        )}
-      </button>
+        </button>
+        <button
+          className="ticker-pause-btn"
+          onClick={() => setIsPaused(!isPaused)}
+          aria-label={isPaused ? 'Resume ticker' : 'Pause ticker'}
+        >
+          {isPaused ? (
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <rect x="6" y="4" width="4" height="16" />
+              <rect x="14" y="4" width="4" height="16" />
+            </svg>
+          )}
+        </button>
+      </div>
+
+      {/* Help overlay */}
+      {showHelp && <TickerHelp onClose={() => setShowHelp(false)} />}
     </div>
   )
 }

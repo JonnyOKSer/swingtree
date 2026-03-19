@@ -238,6 +238,32 @@
   line-height: 1;
 }
 
+/* Control buttons container */
+.ticker-controls {
+  display: flex;
+  flex-shrink: 0;
+}
+
+/* Help button */
+.ticker-help-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--charcoal-light);
+  border: none;
+  border-right: 1px solid var(--charcoal);
+  cursor: pointer;
+  color: var(--ash-grey);
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.ticker-help-btn:hover {
+  color: var(--serengeti-gold);
+  background: #333;
+}
+
 /* Pause button */
 .ticker-pause-btn {
   display: flex;
@@ -262,8 +288,123 @@
   background: #3a3a3a;
 }
 
+.ticker-help-btn svg,
 .ticker-pause-btn svg {
   display: block;
+}
+
+/* Help overlay */
+.ticker-help-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ticker-help-content {
+  background: var(--charcoal);
+  border: 1px solid var(--serengeti-gold);
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  position: relative;
+}
+
+.ticker-help-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--ash-grey);
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.ticker-help-close:hover {
+  color: var(--flash-white);
+}
+
+.ticker-help-content h3 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--serengeti-gold);
+  margin: 0 0 20px 0;
+}
+
+.ticker-help-section {
+  margin-bottom: 20px;
+}
+
+.ticker-help-section:last-child {
+  margin-bottom: 0;
+}
+
+.ticker-help-section h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ash-grey);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0 0 8px 0;
+}
+
+.ticker-help-section p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--flash-white);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.ticker-help-example {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--charcoal-light);
+  padding: 6px 10px;
+  border-radius: 3px;
+}
+
+.ticker-help-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ticker-help-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--flash-white);
+}
+
+.ticker-help-item .ticker-indicator {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+}
+
+.ticker-help-item .ticker-first-set {
+  font-size: 11px;
 }
 
 /* Mobile adjustments */
@@ -306,6 +447,7 @@
     font-size: 10px;
   }
 
+  .ticker-help-btn,
   .ticker-pause-btn {
     width: 36px;
     height: 36px;
@@ -314,5 +456,9 @@
   .ticker-fade-left,
   .ticker-fade-right {
     width: 24px;
+  }
+
+  .ticker-help-content {
+    padding: 20px;
   }
 }
