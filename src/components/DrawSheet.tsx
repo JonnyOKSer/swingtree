@@ -62,6 +62,7 @@ interface DrawSheetProps {
   round: string | null
   status: 'active' | 'upcoming' | 'completed'
   tour: string
+  startDate?: string | null
   onClose: () => void
 }
 
@@ -286,6 +287,8 @@ export default function DrawSheet({
   surface,
   city,
   tour,
+  status,
+  startDate,
   onClose
 }: DrawSheetProps) {
   const [drawData, setDrawData] = useState<DrawData | null>(null)
@@ -377,6 +380,21 @@ export default function DrawSheet({
   // Get tour badge class
   const tourClass = (tournamentInfo.tour || tour || 'ATP').toLowerCase().replace('/', '-')
 
+  // Format start date for upcoming tournaments
+  const formatStartDate = (dateStr: string | null | undefined): string | null => {
+    if (!dateStr) return null
+    try {
+      const date = new Date(dateStr)
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      })
+    } catch {
+      return null
+    }
+  }
+
   return (
     <div className="draw-overlay" onClick={onClose}>
       <div className="draw-sheet" onClick={e => e.stopPropagation()}>
@@ -391,6 +409,9 @@ export default function DrawSheet({
             <span className="draw-meta">
               {tournamentInfo.category} • {tournamentInfo.surface} • {tournamentInfo.city}
               {tournamentInfo.current_round && ` • ${tournamentInfo.current_round}`}
+              {status === 'upcoming' && startDate && (
+                <span className="start-date"> • Starts {formatStartDate(startDate)}</span>
+              )}
             </span>
           </div>
           <button className="close-draw" onClick={onClose}>×</button>

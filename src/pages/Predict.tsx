@@ -78,6 +78,7 @@ export default function Predict() {
           round={selectedTournament.round}
           status={selectedTournament.status}
           tour={selectedTournament.tour}
+          startDate={selectedTournament.startDate}
           onClose={closeDraw}
         />
       )}

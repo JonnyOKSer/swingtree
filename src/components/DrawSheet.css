@@ -98,6 +98,11 @@
   letter-spacing: 1px;
 }
 
+.draw-meta .start-date {
+  color: var(--serengeti-gold);
+  font-weight: 500;
+}
+
 .close-draw {
   background: none;
   border: none;
