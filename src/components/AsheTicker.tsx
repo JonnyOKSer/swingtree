@@ -15,6 +15,10 @@ export interface MatchResult {
   isLive: boolean
   indicator: '✅' | '❌' | '🌳' | '⚡' | ''
   scheduledAt: string
+  firstSet?: {
+    predictedScore: string | null
+    winnerWonFirstSet: boolean | null
+  }
 }
 
 interface AsheTickerProps {
@@ -53,7 +57,15 @@ function TickerItem({ match, showTournament }: { match: MatchResult; showTournam
         </>
       )}
 
-      <span className="ticker-score">{match.score}</span>
+      {/* First set score display: gold if winner won FS, white with ⚡ if divergence */}
+      {match.firstSet?.predictedScore ? (
+        <span className={`ticker-first-set ${match.firstSet.winnerWonFirstSet ? 'winner-won-fs' : 'divergence'}`}>
+          FS {match.firstSet.predictedScore}
+          {match.firstSet.winnerWonFirstSet === false && <span className="fs-bolt">⚡</span>}
+        </span>
+      ) : (
+        <span className="ticker-score">{match.score}</span>
+      )}
 
       {match.isLive && <span className="ticker-live-tag">LIVE</span>}
 

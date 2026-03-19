@@ -26,6 +26,10 @@ interface TickerMatch {
   isLive: boolean
   indicator: '✅' | '❌' | '🌳' | '⚡' | ''
   scheduledAt: string
+  firstSet?: {
+    predictedScore: string | null
+    winnerWonFirstSet: boolean | null  // true if match winner won first set
+  }
 }
 
 function shortenTournamentName(name: string): string {
@@ -141,7 +145,8 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
         pl.correct,
         pl.first_set_score_correct,
         pl.first_set_winner,
-        pl.predicted_winner
+        pl.predicted_winner,
+        pl.first_set_score
       FROM draw_matches dm
       LEFT JOIN prediction_log pl ON (
         -- Tournament name fuzzy match (either contains the other)
@@ -191,7 +196,13 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
       }) : '',
       scheduledAt: row.scheduled_date ?
         `${row.scheduled_date}T${row.scheduled_time || '00:00'}:00Z` :
-        new Date().toISOString()
+        new Date().toISOString(),
+      firstSet: row.first_set_score ? {
+        predictedScore: row.first_set_score,
+        winnerWonFirstSet: row.first_set_winner && winnerName
+          ? row.first_set_winner.toLowerCase().includes(winnerName.split(' ').pop()?.toLowerCase() || '')
+          : null
+      } : undefined
     }})
 
     return {
