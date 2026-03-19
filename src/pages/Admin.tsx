@@ -46,6 +46,7 @@ interface AccuracyStats {
   }
   pending: number
   voided: number
+  lastReconciliation: string | null
 }
 
 export default function Admin() {
@@ -402,6 +403,12 @@ export default function Admin() {
             {loadingAccuracy ? '↻' : '⟳'}
           </button>
         </div>
+
+        {accuracyStats?.lastReconciliation && (
+          <p className="last-reconciliation">
+            Last reconciliation: {new Date(accuracyStats.lastReconciliation).toLocaleString()}
+          </p>
+        )}
 
         {loadingAccuracy && !accuracyStats ? (
           <p>Loading stats...</p>

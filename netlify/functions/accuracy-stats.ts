@@ -24,6 +24,7 @@ interface AccuracyStats {
   }
   pending: number
   voided: number
+  lastReconciliation: string | null
 }
 
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
@@ -107,6 +108,17 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       WHERE confidence_tier = 'VOID'
     `)
 
+    // Get last reconciliation timestamp
+    const lastReconResult = await pool.query(`
+      SELECT MAX(reconciled_at) as last_reconciliation
+      FROM prediction_log
+      WHERE reconciled_at IS NOT NULL
+    `)
+
+    const lastReconciliation = lastReconResult.rows[0]?.last_reconciliation
+      ? new Date(lastReconResult.rows[0].last_reconciliation).toISOString()
+      : null
+
     const stats: AccuracyStats = {
       byTier,
       overall: {
@@ -125,7 +137,8 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           : 0
       },
       pending: parseInt(pendingResult.rows[0]?.count || '0'),
-      voided: parseInt(voidedResult.rows[0]?.count || '0')
+      voided: parseInt(voidedResult.rows[0]?.count || '0'),
+      lastReconciliation
     }
 
     return {
