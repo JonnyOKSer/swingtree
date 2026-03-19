@@ -103,48 +103,14 @@
 }
 
 .tier-filter-btn:hover {
-  color: var(--flash-white);
-  border-color: var(--flash-white);
+  color: var(--serengeti-gold);
+  border-color: var(--serengeti-gold);
 }
 
 .tier-filter-btn.active {
   color: var(--charcoal);
-  background: var(--ash-grey);
-  border-color: var(--ash-grey);
-}
-
-/* Tier-specific active colors */
-.tier-filter-btn.all.active {
   background: var(--serengeti-gold);
   border-color: var(--serengeti-gold);
-}
-
-.tier-filter-btn.strong.active {
-  background: var(--serengeti-gold);
-  border-color: var(--serengeti-gold);
-}
-
-.tier-filter-btn.confident.active {
-  background: #9a9a8a;
-  border-color: #9a9a8a;
-}
-
-.tier-filter-btn.pick.active {
-  background: #6a6a6a;
-  border-color: #6a6a6a;
-  color: var(--flash-white);
-}
-
-.tier-filter-btn.lean.active {
-  background: #555555;
-  border-color: #555555;
-  color: var(--flash-white);
-}
-
-.tier-filter-btn.skip.active {
-  background: #3a3a3a;
-  border-color: #555555;
-  color: var(--ash-grey);
 }
 
 /* Tournament List */

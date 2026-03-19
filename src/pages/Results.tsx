@@ -144,8 +144,8 @@ export default function Results() {
   const [results, setResults] = useState<ResultsData>(FALLBACK_RESULTS)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<TabView>('overall')
-  // Default: STRONG, CONFIDENT, PICK selected
-  const [selectedTiers, setSelectedTiers] = useState<Set<Tier>>(new Set(['STRONG', 'CONFIDENT', 'PICK']))
+  // Default: STRONG, CONFIDENT, PICK, LEAN selected
+  const [selectedTiers, setSelectedTiers] = useState<Set<Tier>>(new Set(['STRONG', 'CONFIDENT', 'PICK', 'LEAN']))
 
   const toggleTier = (tier: Tier) => {
     setSelectedTiers(prev => {
