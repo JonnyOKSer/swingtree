@@ -38,10 +38,25 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     const pool = getPool()
     const queryParams = event.queryStringParameters || {}
 
-    // Include SKIP tier when ?includeSkips=true
-    // Default: exclude SKIP from both match and first set stats for consistency
-    const includeSkips = queryParams.includeSkips === 'true'
-    const tierFilter = includeSkips ? "confidence_tier != 'VOID'" : "confidence_tier NOT IN ('SKIP', 'VOID')"
+    // Support both legacy ?includeSkips=true and new ?tiers=STRONG,CONFIDENT,PICK
+    const validTiers = ['STRONG', 'CONFIDENT', 'PICK', 'LEAN', 'SKIP']
+    let selectedTiers: string[]
+
+    if (queryParams.tiers) {
+      // New format: explicit tier selection
+      selectedTiers = queryParams.tiers.split(',').filter(t => validTiers.includes(t))
+    } else if (queryParams.includeSkips === 'true') {
+      // Legacy: all tiers
+      selectedTiers = validTiers
+    } else {
+      // Default: STRONG, CONFIDENT, PICK
+      selectedTiers = ['STRONG', 'CONFIDENT', 'PICK']
+    }
+
+    // Build tier filter - always exclude VOID
+    const tierFilter = selectedTiers.length > 0
+      ? `confidence_tier IN (${selectedTiers.map(t => `'${t}'`).join(',')}) AND confidence_tier != 'VOID'`
+      : "confidence_tier = 'NEVER_MATCH'"  // No tiers selected = no results
 
     // Get overall results by tour
     // Deduplicate by tournament+round+players to prevent same match from counting twice

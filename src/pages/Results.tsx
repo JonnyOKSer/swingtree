@@ -136,17 +136,40 @@ function TournamentRow({ tournament }: { tournament: TournamentResults }) {
 
 type TabView = 'overall' | 'tournament'
 
+const ALL_TIERS = ['STRONG', 'CONFIDENT', 'PICK', 'LEAN', 'SKIP'] as const
+type Tier = typeof ALL_TIERS[number]
+
 export default function Results() {
   const isAuthenticated = sessionStorage.getItem('ashe-authenticated') === 'true'
   const [results, setResults] = useState<ResultsData>(FALLBACK_RESULTS)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<TabView>('overall')
-  const [includeSkips, setIncludeSkips] = useState(false)
+  // Default: STRONG, CONFIDENT, PICK selected
+  const [selectedTiers, setSelectedTiers] = useState<Set<Tier>>(new Set(['STRONG', 'CONFIDENT', 'PICK']))
+
+  const toggleTier = (tier: Tier) => {
+    setSelectedTiers(prev => {
+      const next = new Set(prev)
+      if (next.has(tier)) {
+        next.delete(tier)
+      } else {
+        next.add(tier)
+      }
+      return next
+    })
+  }
+
+  const selectAll = () => {
+    setSelectedTiers(new Set(ALL_TIERS))
+  }
+
+  const allSelected = selectedTiers.size === ALL_TIERS.length
 
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        const url = includeSkips ? '/api/results?includeSkips=true' : '/api/results'
+        const tiersParam = Array.from(selectedTiers).join(',')
+        const url = `/api/results?tiers=${tiersParam}`
         const response = await fetch(url)
         if (response.ok) {
           const data = await response.json()
@@ -161,7 +184,7 @@ export default function Results() {
       }
     }
     fetchResults()
-  }, [includeSkips])
+  }, [selectedTiers])
 
   return (
     <div className="results-page">
@@ -185,15 +208,22 @@ export default function Results() {
         </button>
       </div>
 
-      <div className="results-filter">
-        <label className="toggle-label">
-          <input
-            type="checkbox"
-            checked={includeSkips}
-            onChange={(e) => setIncludeSkips(e.target.checked)}
-          />
-          <span className="toggle-text">Include SKIPs</span>
-        </label>
+      <div className="tier-filters">
+        <button
+          className={`tier-filter-btn all ${allSelected ? 'active' : ''}`}
+          onClick={selectAll}
+        >
+          ALL
+        </button>
+        {ALL_TIERS.map(tier => (
+          <button
+            key={tier}
+            className={`tier-filter-btn ${tier.toLowerCase()} ${selectedTiers.has(tier) ? 'active' : ''}`}
+            onClick={() => toggleTier(tier)}
+          >
+            {tier}
+          </button>
+        ))}
       </div>
 
       {loading ? (
@@ -225,10 +255,7 @@ export default function Results() {
             />
           </div>
           <p className="results-note">
-            Activation Date: March 13 2026. {includeSkips
-              ? 'Showing all tiers including LEAN and SKIP.'
-              : 'Showing STRONG, CONFIDENT, PICK tiers only. Toggle "Include SKIPs" to see LEAN and SKIP predictions.'
-            } Qualifying rounds excluded.
+            Activation Date: March 13 2026. Showing {allSelected ? 'all tiers' : Array.from(selectedTiers).join(', ') || 'no tiers'}. Qualifying rounds excluded.
           </p>
         </>
       ) : (
