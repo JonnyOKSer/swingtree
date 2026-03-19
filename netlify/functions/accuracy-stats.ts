@@ -17,7 +17,12 @@ interface AccuracyStats {
     incorrect: number
     accuracy: number
   }
-  firstSet: {
+  firstSetWinner: {
+    total: number
+    correct: number
+    accuracy: number
+  }
+  firstSetScore: {
     total: number
     correct: number
     accuracy: number
@@ -79,8 +84,22 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     const overallCorrect = byTier.reduce((sum, t) => sum + t.correct, 0)
     const overallIncorrect = byTier.reduce((sum, t) => sum + t.incorrect, 0)
 
-    // Get first set score accuracy
-    const fsResult = await pool.query(`
+    // Get first set winner accuracy
+    const fsWinnerResult = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE first_set_correct IS NOT NULL) as total,
+        COUNT(*) FILTER (WHERE first_set_correct = true) as correct
+      FROM prediction_log
+      WHERE reconciled_at IS NOT NULL
+        AND confidence_tier <> 'VOID'
+        AND actual_winner IS NOT NULL
+    `)
+
+    const fsWinnerTotal = parseInt(fsWinnerResult.rows[0]?.total || '0')
+    const fsWinnerCorrect = parseInt(fsWinnerResult.rows[0]?.correct || '0')
+
+    // Get first set exact score accuracy
+    const fsScoreResult = await pool.query(`
       SELECT
         COUNT(*) FILTER (WHERE first_set_score_correct IS NOT NULL) as total,
         COUNT(*) FILTER (WHERE first_set_score_correct = true) as correct
@@ -90,8 +109,8 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         AND actual_winner IS NOT NULL
     `)
 
-    const fsTotal = parseInt(fsResult.rows[0]?.total || '0')
-    const fsCorrect = parseInt(fsResult.rows[0]?.correct || '0')
+    const fsScoreTotal = parseInt(fsScoreResult.rows[0]?.total || '0')
+    const fsScoreCorrect = parseInt(fsScoreResult.rows[0]?.correct || '0')
 
     // Get pending count
     const pendingResult = await pool.query(`
@@ -129,11 +148,18 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           ? Math.round((overallCorrect / overallTotal) * 1000) / 10
           : 0
       },
-      firstSet: {
-        total: fsTotal,
-        correct: fsCorrect,
-        accuracy: fsTotal > 0
-          ? Math.round((fsCorrect / fsTotal) * 1000) / 10
+      firstSetWinner: {
+        total: fsWinnerTotal,
+        correct: fsWinnerCorrect,
+        accuracy: fsWinnerTotal > 0
+          ? Math.round((fsWinnerCorrect / fsWinnerTotal) * 1000) / 10
+          : 0
+      },
+      firstSetScore: {
+        total: fsScoreTotal,
+        correct: fsScoreCorrect,
+        accuracy: fsScoreTotal > 0
+          ? Math.round((fsScoreCorrect / fsScoreTotal) * 1000) / 10
           : 0
       },
       pending: parseInt(pendingResult.rows[0]?.count || '0'),

@@ -39,7 +39,12 @@ interface AccuracyStats {
     incorrect: number
     accuracy: number
   }
-  firstSet: {
+  firstSetWinner: {
+    total: number
+    correct: number
+    accuracy: number
+  }
+  firstSetScore: {
     total: number
     correct: number
     accuracy: number
@@ -422,9 +427,14 @@ export default function Admin() {
                 <span className="accuracy-pct">{accuracyStats.overall.accuracy}%</span>
               </div>
               <div className="accuracy-stat-box">
-                <span className="accuracy-value">{accuracyStats.firstSet.correct}/{accuracyStats.firstSet.total}</span>
-                <span className="accuracy-label">First Set Score</span>
-                <span className="accuracy-pct">{accuracyStats.firstSet.accuracy}%</span>
+                <span className="accuracy-value">{accuracyStats.firstSetWinner.correct}/{accuracyStats.firstSetWinner.total}</span>
+                <span className="accuracy-label">1st Set Winner</span>
+                <span className="accuracy-pct">{accuracyStats.firstSetWinner.accuracy}%</span>
+              </div>
+              <div className="accuracy-stat-box">
+                <span className="accuracy-value">{accuracyStats.firstSetScore.correct}/{accuracyStats.firstSetScore.total}</span>
+                <span className="accuracy-label">1st Set Score</span>
+                <span className="accuracy-pct">{accuracyStats.firstSetScore.accuracy}%</span>
               </div>
               <div className="accuracy-stat-box secondary">
                 <span className="accuracy-value">{accuracyStats.pending}</span>
