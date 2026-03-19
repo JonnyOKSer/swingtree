@@ -219,7 +219,9 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           t.surface,
           t.category,
           t.tour,
-          t.typical_month
+          t.typical_month,
+          t.start_date,
+          t.end_date
         FROM tournaments t
         WHERE (t.typical_month = EXTRACT(MONTH FROM CURRENT_DATE)
                OR t.typical_month = EXTRACT(MONTH FROM CURRENT_DATE) + 1)
@@ -255,8 +257,8 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
               tour,
               status: 'upcoming',
               round: null,
-              startDate: null,
-              endDate: null
+              startDate: row.start_date ? row.start_date.toISOString().split('T')[0] : null,
+              endDate: row.end_date ? row.end_date.toISOString().split('T')[0] : null
             })
           }
         }
