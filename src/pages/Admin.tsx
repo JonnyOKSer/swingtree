@@ -58,7 +58,8 @@ interface WageringInsight {
   id: string
   timestamp: string
   tournament: string | null
-  type: 'parlay' | 'single' | 'round_pattern' | 'tier_pattern'
+  tour: string | null
+  type: 'parlay' | 'single' | 'round_pattern' | 'tier_pattern' | 'tour_pattern'
   predictionType: string
   description: string
   winRate: number
@@ -66,25 +67,42 @@ interface WageringInsight {
   confidence: 'HIGH' | 'MEDIUM' | 'LOW'
 }
 
+interface RoundPattern {
+  round: string
+  tour?: string
+  matchWinner: number | null
+  firstSetWinner: number | null
+  firstSetScore: number | null
+  total: number
+}
+
+interface TierPattern {
+  tier: string
+  tour?: string
+  matchWinRate: number
+  fsWinnerRate: number
+  fsScoreRate: number
+  total: number
+}
+
+interface TourSummary {
+  tour: string
+  total: number
+  matchWinRate: number
+  fsWinnerRate: number
+  fsScoreRate: number
+}
+
 interface WageringAnalysis {
   generatedAt: string
   totalPredictions: number
   dateRange: { start: string; end: string } | null
   insights: WageringInsight[]
-  roundPatterns: {
-    round: string
-    matchWinner: number | null
-    firstSetWinner: number | null
-    firstSetScore: number | null
-    total: number
-  }[]
-  tierPatterns: {
-    tier: string
-    matchWinRate: number
-    fsWinnerRate: number
-    fsScoreRate: number
-    total: number
-  }[]
+  roundPatterns: RoundPattern[]
+  tierPatterns: TierPattern[]
+  tourSummary: TourSummary[]
+  roundPatternsByTour: { [tour: string]: RoundPattern[] }
+  tierPatternsByTour: { [tour: string]: TierPattern[] }
 }
 
 export default function Admin() {
@@ -705,19 +723,55 @@ export default function Admin() {
               )}
             </p>
 
+            {/* Tour Summary */}
+            {wageringInsights.tourSummary && wageringInsights.tourSummary.length > 0 && (
+              <div className="tour-summary">
+                <h3>Tour Summary</h3>
+                <div className="tour-cards">
+                  {wageringInsights.tourSummary.map(ts => (
+                    <div key={ts.tour} className={`tour-card tour-${ts.tour.toLowerCase()}`}>
+                      <span className="tour-name">{ts.tour}</span>
+                      <div className="tour-stats">
+                        <div className="tour-stat">
+                          <span className="stat-value">{(ts.matchWinRate * 100).toFixed(1)}%</span>
+                          <span className="stat-label">Match</span>
+                        </div>
+                        <div className="tour-stat">
+                          <span className="stat-value">{(ts.fsWinnerRate * 100).toFixed(1)}%</span>
+                          <span className="stat-label">FS Win</span>
+                        </div>
+                        <div className="tour-stat">
+                          <span className="stat-value">{(ts.fsScoreRate * 100).toFixed(1)}%</span>
+                          <span className="stat-label">FS Score</span>
+                        </div>
+                        <div className="tour-stat">
+                          <span className="stat-value">{ts.total}</span>
+                          <span className="stat-label">n</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Insights Feed */}
             {wageringInsights.insights.length > 0 && (
               <div className="insights-feed">
                 <h3>Top Insights</h3>
-                {wageringInsights.insights.slice(0, 10).map(insight => (
+                {wageringInsights.insights.slice(0, 15).map(insight => (
                   <div key={insight.id} className={`insight-item ${insight.type} ${insight.confidence.toLowerCase()}`}>
                     <div className="insight-header">
                       <span className={`insight-type ${insight.type}`}>
                         {insight.type === 'round_pattern' ? '📊' :
                          insight.type === 'tier_pattern' ? '🎯' :
+                         insight.type === 'tour_pattern' ? '🎾' :
                          insight.type === 'parlay' ? '🔗' : '📈'}
                         {insight.type.replace('_', ' ')}
                       </span>
+                      {insight.tour && (
+                        <span className={`insight-tour tour-${insight.tour.toLowerCase()}`}>{insight.tour}</span>
+                      )}
                       <span className={`insight-confidence ${insight.confidence.toLowerCase()}`}>
                         {insight.confidence}
                       </span>
@@ -770,7 +824,7 @@ export default function Admin() {
             {/* Tier Patterns Table */}
             {wageringInsights.tierPatterns.length > 0 && (
               <div className="tier-patterns">
-                <h3>Accuracy by Tier</h3>
+                <h3>Accuracy by Tier (Overall)</h3>
                 <table className="patterns-table">
                   <thead>
                     <tr>
@@ -793,6 +847,66 @@ export default function Admin() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* Tour-Specific Tables */}
+            {wageringInsights.roundPatternsByTour && Object.keys(wageringInsights.roundPatternsByTour).length > 0 && (
+              <div className="tour-breakdown">
+                <h3>By Tour</h3>
+                <div className="tour-tables">
+                  {Object.entries(wageringInsights.roundPatternsByTour).map(([tour, roundPatterns]) => (
+                    <div key={tour} className={`tour-table-section tour-${tour.toLowerCase()}`}>
+                      <h4 className="tour-table-header">{tour}</h4>
+
+                      {/* Round patterns for this tour */}
+                      <table className="patterns-table compact">
+                        <thead>
+                          <tr>
+                            <th>Round</th>
+                            <th>Match</th>
+                            <th>FS Score</th>
+                            <th>n</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {roundPatterns.map(rp => (
+                            <tr key={`${tour}-${rp.round}`}>
+                              <td>{rp.round}</td>
+                              <td>{rp.matchWinner !== null ? `${(rp.matchWinner * 100).toFixed(1)}%` : '-'}</td>
+                              <td>{rp.firstSetScore !== null ? `${(rp.firstSetScore * 100).toFixed(1)}%` : '-'}</td>
+                              <td>{rp.total}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+
+                      {/* Tier patterns for this tour */}
+                      {wageringInsights.tierPatternsByTour && wageringInsights.tierPatternsByTour[tour] && (
+                        <table className="patterns-table compact tier-table">
+                          <thead>
+                            <tr>
+                              <th>Tier</th>
+                              <th>Match</th>
+                              <th>FS Score</th>
+                              <th>n</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {wageringInsights.tierPatternsByTour[tour].map(tp => (
+                              <tr key={`${tour}-${tp.tier}`} className={`tier-row tier-${tp.tier.toLowerCase()}`}>
+                                <td><span className={`tier-badge tier-${tp.tier.toLowerCase()}`}>{tp.tier}</span></td>
+                                <td>{(tp.matchWinRate * 100).toFixed(1)}%</td>
+                                <td>{(tp.fsScoreRate * 100).toFixed(1)}%</td>
+                                <td>{tp.total}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
