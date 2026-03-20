@@ -699,7 +699,11 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
           if (drawMatch.status === 'finished' && drawMatch.winner_name) {
             // Completed match from draw
-            const loser = drawMatch.winner_name === player1 ? player2 : player1
+            // Use last-name matching to determine loser (handles name format variations like "D. Yastremska" vs "Dayana Yastremska")
+            const winnerLast = extractLastName(drawMatch.winner_name)
+            const player1Last = extractLastName(player1)
+            const player2Last = extractLastName(player2)
+            const loser = winnerLast === player1Last ? player2 : player1
 
             // Determine which player was predicted to win using last-name matching
             let predictedWinnerDisplay = prediction?.predicted_winner
