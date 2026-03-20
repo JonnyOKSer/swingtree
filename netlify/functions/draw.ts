@@ -314,21 +314,6 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     console.log(`Found ${drawMatchesResult.rows.length} draw matches for ${tournamentSlug} (${tour})`)
 
-    // Build a lookup for draw matches by round
-    const drawByRound: Record<string, any[]> = {}
-    for (const match of drawMatchesResult.rows) {
-      const round = match.round || 'R64'
-      if (!drawByRound[round]) {
-        drawByRound[round] = []
-      }
-      drawByRound[round].push(match)
-    }
-
-    // Step 3a-hybrid: Fetch ESPN matches as fallback for missing api-tennis data
-    // This handles cases where api-tennis hasn't updated with new round matchups yet
-    const espnMatches = await fetchESPNMatches(tournamentSlug, tour)
-    console.log(`Found ${espnMatches.length} ESPN matches for ${tournamentSlug} (${tour})`)
-
     // Helper to extract last name for matching
     const getLastName = (name: string): string => {
       if (!name) return ''
@@ -338,6 +323,27 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       if (parts.length > 1 && CHINESE_SURNAMES.has(parts[0])) return parts[0]
       return parts[parts.length - 1]
     }
+
+    // Build a lookup for draw matches by round, deduping by player pair
+    const drawByRound: Record<string, any[]> = {}
+    const seenInRound: Record<string, Set<string>> = {}
+    for (const match of drawMatchesResult.rows) {
+      const round = match.round || 'R64'
+      if (!drawByRound[round]) {
+        drawByRound[round] = []
+        seenInRound[round] = new Set()
+      }
+      // Dedupe by player pair within each round
+      const playerKey = [getLastName(match.player_1_name), getLastName(match.player_2_name)].sort().join('|')
+      if (seenInRound[round].has(playerKey)) continue
+      seenInRound[round].add(playerKey)
+      drawByRound[round].push(match)
+    }
+
+    // Step 3a-hybrid: Fetch ESPN matches as fallback for missing api-tennis data
+    // This handles cases where api-tennis hasn't updated with new round matchups yet
+    const espnMatches = await fetchESPNMatches(tournamentSlug, tour)
+    console.log(`Found ${espnMatches.length} ESPN matches for ${tournamentSlug} (${tour})`)
 
     // Build a set of existing matches (by player pair + round) to avoid duplicates
     // Include round in the key so that matches in different rounds are not considered duplicates
