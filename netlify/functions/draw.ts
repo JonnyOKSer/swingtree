@@ -350,8 +350,18 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     // Add ESPN matches that are missing from api-tennis
     let espnAdded = 0
+    const espnDebug: Array<{players: string, key: string, exists: boolean}> = []
     for (const espnMatch of espnMatches) {
       const key = [getLastName(espnMatch.player1), getLastName(espnMatch.player2)].sort().join('|')
+
+      // Log first 5 ESPN matches for debugging
+      if (espnDebug.length < 5) {
+        espnDebug.push({
+          players: `${espnMatch.player1} vs ${espnMatch.player2}`,
+          key,
+          exists: existingMatches.has(key)
+        })
+      }
 
       // Skip if this match already exists in draw_matches
       if (existingMatches.has(key)) continue
@@ -822,6 +832,9 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       rounds
     }
 
+    // Sample of existing match keys for debugging
+    const existingMatchesSample = Array.from(existingMatches).slice(0, 10)
+
     return {
       statusCode: 200,
       headers,
@@ -831,7 +844,9 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         _debug: {
           espnMatchCount: espnMatches.length,
           espnAdded,
-          apiTennisR64Count: (drawByRound['R64'] || []).length
+          apiTennisR64Count: (drawByRound['R64'] || []).length,
+          espnDebug,
+          existingMatchesSample
         }
       })
     }
