@@ -26,6 +26,11 @@
 [functions."reconcile-predictions"]
   schedule = "*/15 * * * *"
 
+# Scheduled function: Update live matches status every 5 minutes
+# This is a lightweight check that only queries matches currently marked as "live"
+[functions."update-live-matches"]
+  schedule = "*/5 * * * *"
+
 # API routes
 [[redirects]]
   from = "/api/*"
