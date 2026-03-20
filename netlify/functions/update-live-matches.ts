@@ -74,7 +74,34 @@ const handler: Handler = async (event: HandlerEvent) => {
 
   console.log(`[update-live] Starting at ${new Date().toISOString()}`);
 
-  const pool = getPool();
+  // Check API key early
+  const apiKey = process.env.ATP_TENNIS_KEY;
+  if (!apiKey) {
+    console.error("[update-live] ATP_TENNIS_KEY not set");
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        error: "ATP_TENNIS_KEY environment variable not set"
+      })
+    };
+  }
+
+  let pool;
+  try {
+    pool = getPool();
+  } catch (dbError) {
+    console.error("[update-live] Database connection error:", dbError);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        error: `Database connection error: ${dbError instanceof Error ? dbError.message : String(dbError)}`
+      })
+    };
+  }
 
   try {
     // Get all matches currently marked as "live"
