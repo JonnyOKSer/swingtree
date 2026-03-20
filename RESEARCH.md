@@ -139,13 +139,91 @@ Monitor tennis betting chatter across Reddit, X, and forums to identify high-int
 
 ---
 
+## SofaScore as Alternative Data Source
+
+**Status:** Bookmarked — consider RapidAPI paid option if ESPN proves insufficient
+**Date Researched:** March 20, 2026
+
+### Overview
+
+[SofaScore](https://www.sofascore.com) provides comprehensive real-time tennis data including live scores, complete draw brackets, H2H statistics, and player form. Evaluated as potential supplement/replacement for ESPN hybrid approach.
+
+### API Endpoints Discovered
+
+SofaScore has an internal API (unofficial) that powers their website:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/api/v1/sport/tennis/events/live` | Live matches |
+| `/api/v1/event/{match_id}` | Match details |
+| `/api/v1/unique-tournament/{id}/season/{season_id}/events` | Tournament schedule |
+| `/api/v1/category/3/tournaments` | ATP tournaments |
+| `/api/v1/category/6/tournaments` | WTA tournaments |
+| `{tournament_url}/matches/round/{round_code}` | Round-specific draw |
+
+### Anti-Scraping Measures
+
+**Significant challenges:**
+- **CloudFlare protection** — Direct requests return 403 Forbidden
+- **Rate limiting** — Aggressive blocking; community recommends 25-30 second delays
+- **User-Agent requirements** — Needs browser-like headers
+- **IP blocking** — Persistent scraping leads to bans
+
+### Available Tools/Libraries
+
+| Tool | Type | Price | Notes |
+|------|------|-------|-------|
+| [RapidAPI SofaScore](https://rapidapi.com/apidojo/api/sofascore) | Paid API | ~$0.01/request (~$10-50/mo) | Official wrapper, bypasses anti-bot |
+| [Apify SofaScore Scraper Pro](https://apify.com/azzouzana/sofascore-scraper-pro) | Commercial | Pay-per-use | Handles CloudFlare |
+| [martiningram/tennis-data](https://github.com/martiningram/tennis-data) | Open source | Free | Python scraper, needs careful rate limiting |
+
+### Data Quality
+
+**Pros:**
+- Real-time scores and live data
+- Complete draw brackets with all rounds
+- H2H statistics, player form, rankings
+- More comprehensive than ESPN for smaller tournaments (250s, Challengers)
+
+**Cons:**
+- No official API — endpoints can change without notice
+- Aggressive anti-scraping makes direct automation difficult
+- Rate limiting (25-30s delays) makes real-time updates impractical
+
+### Comparison with ESPN
+
+| Factor | ESPN | SofaScore |
+|--------|------|-----------|
+| Anti-bot measures | Minimal | Aggressive (CloudFlare) |
+| Rate limits | Lenient | ~25-30s between requests |
+| Reliability | Semi-official API | Unofficial, may break |
+| Draw data quality | Basic | Comprehensive |
+| Real-time scores | Yes | Yes (if accessible) |
+| Cost | Free | Free (risky) or $10-50/mo (RapidAPI) |
+
+### Recommendation
+
+1. **Current approach:** Stick with ESPN as primary fallback — more reliable, free
+2. **If ESPN proves insufficient:** Consider RapidAPI SofaScore (~$10-20/mo)
+3. **Best use case for SofaScore:** One-time draw imports, pre-tournament setup
+
+### Sources
+
+- [SofaScore Tennis](https://www.sofascore.com/tennis)
+- [RapidAPI - SofaScore](https://rapidapi.com/apidojo/api/sofascore)
+- [GitHub - tennis-data scraper](https://github.com/martiningram/tennis-data/blob/master/tdata/scrapers/sofascore/sofa_score_scraper.py)
+- [Apify - SofaScore Scraper](https://apify.com/azzouzana/sofascore-scraper-pro)
+
+---
+
 ## Decision Log
 
 | Date | Topic | Decision | Rationale |
 |------|-------|----------|-----------|
 | 2026-03-17 | Superpowers plugin | Evaluate post-Miami | Need stability first; don't change dev workflow mid-tournament |
 | 2026-03-17 | B2C Lead Gen | Devi trial now, custom agent post-Miami | Validate concept before building |
+| 2026-03-20 | SofaScore data source | Bookmark RapidAPI option ($10-20/mo) | ESPN working for now; SofaScore has richer data but aggressive anti-bot |
 
 ---
 
-*Last updated: March 17, 2026*
+*Last updated: March 20, 2026*
