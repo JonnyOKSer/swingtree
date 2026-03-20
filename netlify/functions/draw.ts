@@ -375,14 +375,25 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       return [ln1, ln2].sort().join('|') + '|' + round
     }
 
+    // Round-agnostic key for when ESPN and api-tennis disagree on rounds
+    const makePlayerOnlyKey = (name1: string, name2: string): string => {
+      const ln1 = extractLastName(name1)
+      const ln2 = extractLastName(name2)
+      return [ln1, ln2].sort().join('|')
+    }
+
     const predictionLookup: Record<string, any> = {}
     const partialLookup: Record<string, any> = {}
+    const playerOnlyLookup: Record<string, any> = {}  // Fallback: match by players only
     for (const round of Object.keys(predictionsByRound)) {
       for (const pred of predictionsByRound[round]) {
         const key = makeMatchKey(pred.player1_name, pred.player2_name, round)
         predictionLookup[key] = pred
         const partialKey = makePartialKey(pred.player1_name, pred.player2_name, round)
         if (!partialLookup[partialKey]) partialLookup[partialKey] = pred
+        // Player-only lookup (no round) - use most recent prediction if multiple
+        const playerKey = makePlayerOnlyKey(pred.player1_name, pred.player2_name)
+        playerOnlyLookup[playerKey] = pred
       }
     }
 
@@ -413,6 +424,12 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           if (!prediction) {
             const partialKey = makePartialKey(drawMatch.player_1_name, drawMatch.player_2_name, roundName)
             prediction = partialLookup[partialKey]
+          }
+          // Final fallback: match by player names only (ignore round)
+          // This handles cases where ESPN and api-tennis use different round naming
+          if (!prediction) {
+            const playerKey = makePlayerOnlyKey(drawMatch.player_1_name, drawMatch.player_2_name)
+            prediction = playerOnlyLookup[playerKey]
           }
         } else if (drawMatches.length === 0 && predictionIndex < roundPredictions.length) {
           // No draw data for this round - use predictions in order
