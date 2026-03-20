@@ -345,11 +345,24 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     // Build prediction lookup by players using LAST NAME matching
     // "J. Duckworth" -> "duckworth", "James Duckworth" -> "duckworth"
-    // Handle Chinese names: "Yibing Wu" -> "wu", "Y. Wu" -> "wu"
+    // Handle Chinese names: "Yibing Wu" -> "wu", "Y. Wu" -> "wu", "Zheng Qinwen" -> "zheng"
+    // Common Chinese surnames that appear FIRST in Western order (ESPN uses "Zheng Qinwen")
+    const CHINESE_SURNAMES = new Set([
+      'zheng', 'wang', 'zhang', 'liu', 'chen', 'yang', 'huang', 'zhao', 'wu', 'zhou',
+      'xu', 'sun', 'ma', 'zhu', 'hu', 'guo', 'lin', 'he', 'gao', 'luo', 'peng', 'yuan',
+      'li', 'lu', 'han', 'shi', 'yuan', 'bai', 'xie', 'zeng', 'shen', 'qiu', 'wen'
+    ])
+
     const extractLastName = (name: string): string => {
       if (!name) return ''
       const clean = name.toLowerCase().trim().replace(/[-.]/g, ' ').replace(/\s+/g, ' ')
       const parts = clean.split(' ')
+
+      // If first part is a known Chinese surname, use it (handles "Zheng Qinwen")
+      const firstPart = parts[0]
+      if (parts.length > 1 && CHINESE_SURNAMES.has(firstPart)) {
+        return firstPart
+      }
 
       // If last part is short (1-2 chars like "Wu"), it's likely a Chinese surname - use it
       const lastPart = parts[parts.length - 1]
