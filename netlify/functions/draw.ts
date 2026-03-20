@@ -361,7 +361,9 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     // First, remove corrupted matches where both players have the same last name
     // (This happens when api-tennis data has errors like "Linette vs Linette")
+    let removedCorrupted = 0
     for (const round of Object.keys(drawByRound)) {
+      const before = drawByRound[round].length
       drawByRound[round] = drawByRound[round].filter(m => {
         const ln1 = getLastName(m.player_1_name)
         const ln2 = getLastName(m.player_2_name)
@@ -371,6 +373,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         }
         return true
       })
+      removedCorrupted += before - drawByRound[round].length
+    }
+    if (removedCorrupted > 0) {
+      console.log(`Removed ${removedCorrupted} corrupted matches with same-player last names`)
     }
 
     // Use ESPN to correct round assignments and add missing matches
@@ -901,7 +907,11 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ success: true, ...draw })
+      body: JSON.stringify({
+        success: true,
+        ...draw,
+        _debug: { removedCorrupted, espnAdded, espnMoved }
+      })
     }
   } catch (error) {
     console.error('Error fetching draw:', error)
