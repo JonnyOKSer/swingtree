@@ -26,9 +26,9 @@
 [functions."reconcile-predictions"]
   schedule = "*/15 * * * *"
 
-# Scheduled function: Update live matches status every 5 minutes
-# This is a lightweight check that only queries matches currently marked as "live"
-[functions."update-live-matches"]
+# Scheduled function: Update live matches status every 5 minutes (ESPN-based)
+# Uses ESPN completed matches to fix stale "live" statuses
+[functions."fix-live-status"]
   schedule = "*/5 * * * *"
 
 # API routes
