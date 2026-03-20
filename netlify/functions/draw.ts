@@ -825,7 +825,15 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ success: true, ...draw })
+      body: JSON.stringify({
+        success: true,
+        ...draw,
+        _debug: {
+          espnMatchCount: espnMatches.length,
+          espnAdded,
+          apiTennisR64Count: (drawByRound['R64'] || []).length
+        }
+      })
     }
   } catch (error) {
     console.error('Error fetching draw:', error)
