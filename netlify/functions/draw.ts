@@ -293,6 +293,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // This handles cases where frontend sends "miami-open" but DB has just "Miami"
     const slugWords = tournamentSlug.replace(/-/g, ' ').toLowerCase().split(' ')
     const primaryWord = slugWords[0] // First word is usually the city/tournament name
+    // Filter to matches from the last 14 days to avoid historical data pollution
     const drawMatchesResult = await pool.query(`
       SELECT
         match_key,
@@ -309,6 +310,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       FROM draw_matches
       WHERE LOWER(tournament_name) LIKE $1
         AND UPPER(tour) = $2
+        AND scheduled_date >= CURRENT_DATE - INTERVAL '14 days'
       ORDER BY scheduled_date ASC, match_key ASC
     `, [`%${primaryWord}%`, tour])
 
