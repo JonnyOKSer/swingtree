@@ -1,6 +1,85 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
 import { getPool } from './db'
 
+// ESPN API endpoints for hybrid draw data
+const ESPN_ATP_URL = 'https://site.api.espn.com/apis/site/v2/sports/tennis/atp/scoreboard'
+const ESPN_WTA_URL = 'https://site.api.espn.com/apis/site/v2/sports/tennis/wta/scoreboard'
+
+// Fetch upcoming matches from ESPN that may be missing from api-tennis
+async function fetchESPNMatches(tournamentName: string, tour: string): Promise<Array<{
+  round: string
+  player1: string
+  player2: string
+  status: 'upcoming' | 'live' | 'finished'
+}>> {
+  const url = tour === 'WTA' ? ESPN_WTA_URL : ESPN_ATP_URL
+
+  try {
+    const response = await fetch(url)
+    if (!response.ok) return []
+
+    const data = await response.json()
+    const matches: Array<{
+      round: string
+      player1: string
+      player2: string
+      status: 'upcoming' | 'live' | 'finished'
+    }> = []
+
+    // Find the matching tournament
+    const tournamentLower = tournamentName.toLowerCase()
+    for (const event of data.events || []) {
+      const eventName = (event.name || '').toLowerCase()
+      // Match by tournament name (e.g., "miami" in "Miami Open presented by Itau")
+      if (!eventName.includes(tournamentLower.split('-')[0])) continue
+
+      // Find singles grouping
+      const singlesSlug = tour === 'WTA' ? 'womens-singles' : 'mens-singles'
+
+      for (const grouping of event.groupings || []) {
+        if (grouping.grouping?.slug !== singlesSlug) continue
+
+        for (const comp of grouping.competitions || []) {
+          const competitors = comp.competitors || []
+          if (competitors.length < 2) continue
+
+          const p1 = competitors[0]?.athlete?.displayName
+          const p2 = competitors[1]?.athlete?.displayName
+          if (!p1 || !p2 || p1 === 'TBD' || p2 === 'TBD') continue
+
+          // Determine status
+          const stateStr = comp.status?.type?.state || 'pre'
+          let status: 'upcoming' | 'live' | 'finished' = 'upcoming'
+          if (stateStr === 'post') status = 'finished'
+          else if (stateStr === 'in') status = 'live'
+
+          // Only include upcoming/live matches (finished ones should come from api-tennis)
+          if (status === 'finished') continue
+
+          // Normalize round name
+          const roundName = comp.status?.type?.description || ''
+          let round = 'R32' // default
+          const roundLower = roundName.toLowerCase()
+          if (roundLower.includes('final') && !roundLower.includes('semi') && !roundLower.includes('quarter')) round = 'F'
+          else if (roundLower.includes('semi')) round = 'SF'
+          else if (roundLower.includes('quarter')) round = 'QF'
+          else if (roundLower.includes('round of 16') || roundLower.includes('4th round')) round = 'R16'
+          else if (roundLower.includes('round of 32') || roundLower.includes('3rd round')) round = 'R32'
+          else if (roundLower.includes('round of 64') || roundLower.includes('2nd round')) round = 'R64'
+          else if (roundLower.includes('round of 128') || roundLower.includes('1st round')) round = 'R128'
+
+          matches.push({ round, player1: p1, player2: p2, status })
+        }
+      }
+    }
+
+    return matches
+  } catch (error) {
+    console.error('ESPN fetch error:', error)
+    return []
+  }
+}
+
 // Calculate confidence tier from probability (fixes bug in prediction engine)
 function getConfidenceTier(prob: number): string {
   const pct = prob * 100
@@ -243,6 +322,62 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         drawByRound[round] = []
       }
       drawByRound[round].push(match)
+    }
+
+    // Step 3a-hybrid: Fetch ESPN matches as fallback for missing api-tennis data
+    // This handles cases where api-tennis hasn't updated with new round matchups yet
+    const espnMatches = await fetchESPNMatches(tournamentSlug, tour)
+    console.log(`Found ${espnMatches.length} ESPN matches for ${tournamentSlug} (${tour})`)
+
+    // Helper to extract last name for matching
+    const getLastName = (name: string): string => {
+      if (!name) return ''
+      const parts = name.toLowerCase().trim().split(' ')
+      // Handle Chinese names (surname first)
+      const CHINESE_SURNAMES = new Set(['zheng', 'wang', 'zhang', 'liu', 'chen', 'yang', 'huang', 'zhao', 'wu', 'zhou', 'xu', 'sun', 'ma', 'zhu', 'hu', 'guo', 'lin', 'he', 'gao', 'luo'])
+      if (parts.length > 1 && CHINESE_SURNAMES.has(parts[0])) return parts[0]
+      return parts[parts.length - 1]
+    }
+
+    // Build a set of existing matches (by player pair) to avoid duplicates
+    const existingMatches = new Set<string>()
+    for (const round of Object.keys(drawByRound)) {
+      for (const match of drawByRound[round]) {
+        const key = [getLastName(match.player_1_name), getLastName(match.player_2_name)].sort().join('|')
+        existingMatches.add(key)
+      }
+    }
+
+    // Add ESPN matches that are missing from api-tennis
+    let espnAdded = 0
+    for (const espnMatch of espnMatches) {
+      const key = [getLastName(espnMatch.player1), getLastName(espnMatch.player2)].sort().join('|')
+
+      // Skip if this match already exists in draw_matches
+      if (existingMatches.has(key)) continue
+
+      // Add to drawByRound
+      if (!drawByRound[espnMatch.round]) {
+        drawByRound[espnMatch.round] = []
+      }
+
+      drawByRound[espnMatch.round].push({
+        match_key: `espn_${key}_${espnMatch.round}`,
+        round: espnMatch.round,
+        player_1_name: espnMatch.player1,
+        player_2_name: espnMatch.player2,
+        status: espnMatch.status === 'live' ? 'live' : 'upcoming',
+        winner_name: null,
+        final_result: null,
+        source: 'espn' // Mark source for debugging
+      })
+
+      existingMatches.add(key)
+      espnAdded++
+    }
+
+    if (espnAdded > 0) {
+      console.log(`Added ${espnAdded} matches from ESPN (missing from api-tennis)`)
     }
 
     // Step 3b: Get ASHE predictions - search by any alias name
