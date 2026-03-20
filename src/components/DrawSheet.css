@@ -247,11 +247,11 @@
   z-index: 10;
 }
 
-/* Parlay Button */
+/* Parlay Button - matches width of match-card (190px) */
 .parlay-btn {
   display: block;
-  width: calc(100% - 16px);
-  margin: 0 8px 12px 8px;
+  width: 190px;
+  margin: 0 auto 12px auto;
   padding: 6px 12px;
   font-size: 10px;
   font-weight: 600;
