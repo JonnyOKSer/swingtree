@@ -371,20 +371,34 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       if (existingRound === espnMatch.round) continue
 
       // If match exists in a DIFFERENT round, MOVE it to correct round (per ESPN)
+      // Also remove any duplicates of this player pair from ALL other rounds
       if (existingRound && existingRound !== espnMatch.round) {
-        // Find the api-tennis match to move
-        const matchToMove = drawByRound[existingRound]?.find(m => {
-          const mKey = [getLastName(m.player_1_name), getLastName(m.player_2_name)].sort().join('|')
-          return mKey === playerKey
-        })
+        // Find the api-tennis match to move (prefer one with results)
+        let matchToMove: any = null
+        for (const round of Object.keys(drawByRound)) {
+          if (round === espnMatch.round) continue // Don't look in target round
+          const found = drawByRound[round]?.find(m => {
+            const mKey = [getLastName(m.player_1_name), getLastName(m.player_2_name)].sort().join('|')
+            return mKey === playerKey
+          })
+          if (found) {
+            // Prefer match with results (winner_name)
+            if (!matchToMove || found.winner_name) {
+              matchToMove = found
+            }
+          }
+        }
 
-        if (matchToMove) {
-          // Remove from wrong round
-          drawByRound[existingRound] = drawByRound[existingRound].filter(m => {
+        // Remove this player pair from ALL rounds except target
+        for (const round of Object.keys(drawByRound)) {
+          if (round === espnMatch.round) continue
+          drawByRound[round] = drawByRound[round].filter(m => {
             const mKey = [getLastName(m.player_1_name), getLastName(m.player_2_name)].sort().join('|')
             return mKey !== playerKey
           })
+        }
 
+        if (matchToMove) {
           // Add to correct round (keep api-tennis data with results)
           if (!drawByRound[espnMatch.round]) {
             drawByRound[espnMatch.round] = []
