@@ -376,7 +376,9 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         drawByRound[espnMatch.round] = []
       }
 
-      drawByRound[espnMatch.round].push({
+      // Insert ESPN matches at beginning - they have accurate round/schedule info
+      // api-tennis often has stale or misassigned rounds
+      drawByRound[espnMatch.round].unshift({
         match_key: `espn_${playerKey}_${espnMatch.round}`,
         round: espnMatch.round,
         player_1_name: espnMatch.player1,
