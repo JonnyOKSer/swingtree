@@ -9,6 +9,7 @@ export type GatedFeature =
   | 'overUnder'
   | 'divergence'
   | 'disruption'
+  | 'parlay'
 
 interface TierGateProps {
   feature: GatedFeature
@@ -23,7 +24,8 @@ const FEATURE_TIER_MAP: Record<GatedFeature, keyof TierAccess> = {
   firstSetScore: 'firstSetScore',
   overUnder: 'overUnder',
   divergence: 'divergence',
-  disruption: 'disruption'
+  disruption: 'disruption',
+  parlay: 'parlay'
 }
 
 const FEATURE_UPGRADE_TIER: Record<GatedFeature, string> = {
@@ -31,7 +33,8 @@ const FEATURE_UPGRADE_TIER: Record<GatedFeature, string> = {
   firstSetScore: 'Tree Top',
   overUnder: 'All-Court',
   divergence: 'All-Court',
-  disruption: 'Tree Top'
+  disruption: 'Tree Top',
+  parlay: 'Tree Top'
 }
 
 /**

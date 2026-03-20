@@ -240,11 +240,95 @@
   padding: 6px 8px;
   text-align: center;
   border-bottom: 1px solid #2a2a2a;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   background: #1a1a1a;
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+/* Parlay Button */
+.parlay-btn {
+  display: block;
+  width: calc(100% - 16px);
+  margin: 0 8px 12px 8px;
+  padding: 6px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.parlay-btn-atp {
+  background: rgba(59, 130, 196, 0.15);
+  color: #5ba4d4;
+  border: 1px solid rgba(59, 130, 196, 0.3);
+}
+
+.parlay-btn-atp:hover {
+  background: rgba(59, 130, 196, 0.25);
+  border-color: rgba(59, 130, 196, 0.5);
+}
+
+.parlay-btn-atp.active {
+  background: rgba(59, 130, 196, 0.35);
+  border-color: #5ba4d4;
+  box-shadow: 0 0 8px rgba(59, 130, 196, 0.4);
+}
+
+.parlay-btn-wta {
+  background: rgba(196, 59, 130, 0.15);
+  color: #d45b9a;
+  border: 1px solid rgba(196, 59, 130, 0.3);
+}
+
+.parlay-btn-wta:hover {
+  background: rgba(196, 59, 130, 0.25);
+  border-color: rgba(196, 59, 130, 0.5);
+}
+
+.parlay-btn-wta.active {
+  background: rgba(196, 59, 130, 0.35);
+  border-color: #d45b9a;
+  box-shadow: 0 0 8px rgba(196, 59, 130, 0.4);
+}
+
+/* Parlay Highlight - ATP Blue */
+.match-card.parlay-highlight-atp {
+  border: 2px solid #5ba4d4 !important;
+  background: linear-gradient(135deg, rgba(59, 130, 196, 0.2) 0%, rgba(59, 130, 196, 0.08) 100%) !important;
+  box-shadow: 0 0 12px rgba(59, 130, 196, 0.4), inset 0 0 20px rgba(59, 130, 196, 0.1);
+  animation: parlayGlowAtp 2s ease-in-out infinite;
+}
+
+@keyframes parlayGlowAtp {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(59, 130, 196, 0.3), inset 0 0 15px rgba(59, 130, 196, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(59, 130, 196, 0.5), inset 0 0 25px rgba(59, 130, 196, 0.1);
+  }
+}
+
+/* Parlay Highlight - WTA Pink */
+.match-card.parlay-highlight-wta {
+  border: 2px solid #d45b9a !important;
+  background: linear-gradient(135deg, rgba(196, 59, 130, 0.2) 0%, rgba(196, 59, 130, 0.08) 100%) !important;
+  box-shadow: 0 0 12px rgba(196, 59, 130, 0.4), inset 0 0 20px rgba(196, 59, 130, 0.1);
+  animation: parlayGlowWta 2s ease-in-out infinite;
+}
+
+@keyframes parlayGlowWta {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(196, 59, 130, 0.3), inset 0 0 15px rgba(196, 59, 130, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(196, 59, 130, 0.5), inset 0 0 25px rgba(196, 59, 130, 0.1);
+  }
 }
 
 .round-matches {

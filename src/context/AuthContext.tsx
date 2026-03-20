@@ -22,6 +22,7 @@ export interface TierAccess {
   divergence: boolean          // false for baseline
   disruption: boolean          // only tree_top
   earlyAccess: boolean         // only tree_top
+  parlay: boolean              // only tree_top - ASHE's parlay picks
 }
 
 export interface AuthContextType {
@@ -46,7 +47,8 @@ const TIER_ACCESS: Record<string, TierAccess> = {
     overUnder: true,
     divergence: true,
     disruption: true,
-    earlyAccess: true
+    earlyAccess: true,
+    parlay: true
   },
   baseline: {
     allTournaments: false,  // Slams + Masters only
@@ -55,7 +57,8 @@ const TIER_ACCESS: Record<string, TierAccess> = {
     overUnder: false,
     divergence: false,
     disruption: false,
-    earlyAccess: false
+    earlyAccess: false,
+    parlay: false
   },
   all_court: {
     allTournaments: true,
@@ -64,7 +67,8 @@ const TIER_ACCESS: Record<string, TierAccess> = {
     overUnder: true,
     divergence: true,
     disruption: false,      // only tree_top
-    earlyAccess: false      // only tree_top
+    earlyAccess: false,     // only tree_top
+    parlay: false           // only tree_top
   },
   tree_top: {
     allTournaments: true,
@@ -73,7 +77,8 @@ const TIER_ACCESS: Record<string, TierAccess> = {
     overUnder: true,
     divergence: true,
     disruption: true,
-    earlyAccess: true
+    earlyAccess: true,
+    parlay: true
   }
 }
 
@@ -85,7 +90,8 @@ const EXPIRED_ACCESS: TierAccess = {
   overUnder: false,
   divergence: false,
   disruption: false,
-  earlyAccess: false
+  earlyAccess: false,
+  parlay: false
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)

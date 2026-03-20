@@ -83,7 +83,13 @@ function GlowingTree() {
   )
 }
 
-function MatchCard({ match }: { match: MatchSlot }) {
+interface MatchCardProps {
+  match: MatchSlot
+  parlayHighlight?: boolean
+  tour?: string
+}
+
+function MatchCard({ match, parlayHighlight = false, tour = 'ATP' }: MatchCardProps) {
   const [expanded, setExpanded] = useState(false)
 
   // Tier-based feature access
@@ -91,6 +97,11 @@ function MatchCard({ match }: { match: MatchSlot }) {
   const canViewFirstSetScore = useFeatureAccess('firstSetScore')
   const canViewOverUnder = useFeatureAccess('overUnder')
   const canViewDivergence = useFeatureAccess('divergence')
+
+  // Determine parlay highlight class based on tour
+  const parlayClass = parlayHighlight
+    ? tour === 'WTA' ? 'parlay-highlight-wta' : 'parlay-highlight-atp'
+    : ''
 
   const getTierClass = (tier?: string) => {
     switch (tier) {
@@ -110,7 +121,7 @@ function MatchCard({ match }: { match: MatchSlot }) {
   // TBD match
   if (match.status === 'tbd') {
     return (
-      <div className="match-card match-tbd">
+      <div className={`match-card match-tbd ${parlayClass}`}>
         <div className="player-row">
           <span className="player-name muted">TBD</span>
         </div>
@@ -125,7 +136,7 @@ function MatchCard({ match }: { match: MatchSlot }) {
   // Bye slot (seeded player advances without playing)
   if (match.status === 'bye') {
     return (
-      <div className="match-card match-bye">
+      <div className={`match-card match-bye ${parlayClass}`}>
         <div className="player-row">
           <span className="player-name muted">Bye</span>
         </div>
@@ -136,7 +147,7 @@ function MatchCard({ match }: { match: MatchSlot }) {
   // Voided match (withdrawal, walkover)
   if (match.status === 'void') {
     return (
-      <div className="match-card match-void">
+      <div className={`match-card match-void ${parlayClass}`}>
         <div className="match-header">
           <span className="tier-badge tier-void">VOID</span>
         </div>
@@ -161,7 +172,7 @@ function MatchCard({ match }: { match: MatchSlot }) {
     const predCorrect = match.prediction?.correct
     return (
       <div
-        className={`match-card match-completed ${match.prediction ? getTierClass(match.prediction.tier) : ''}`}
+        className={`match-card match-completed ${match.prediction ? getTierClass(match.prediction.tier) : ''} ${parlayClass}`}
         onClick={() => setExpanded(!expanded)}
       >
         <div className="match-header">
@@ -215,7 +226,7 @@ function MatchCard({ match }: { match: MatchSlot }) {
     const pred = match.prediction!
     return (
       <div
-        className={`match-card match-predicted ${getTierClass(pred.tier)}`}
+        className={`match-card match-predicted ${getTierClass(pred.tier)} ${parlayClass}`}
         onClick={() => setExpanded(!expanded)}
       >
         <div className="match-header">
@@ -262,7 +273,7 @@ function MatchCard({ match }: { match: MatchSlot }) {
 
   // Known matchup (future round, players known but no prediction)
   return (
-    <div className="match-card match-known">
+    <div className={`match-card match-known ${parlayClass}`}>
       <div className="player-row">
         {match.player1_seed && <span className="player-seed">{match.player1_seed}</span>}
         <span className="player-name">{match.player1}</span>
@@ -292,10 +303,39 @@ export default function DrawSheet({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [tickerMatches, setTickerMatches] = useState<MatchResult[]>([])
+  const [parlayRound, setParlayRound] = useState<string | null>(null)
   const bracketRef = useRef<HTMLDivElement>(null)
 
-  // Tier-based access for legend
+  // Tier-based access for legend and parlay
   const canViewDivergence = useFeatureAccess('divergence')
+  const canUseParlay = useFeatureAccess('parlay')
+
+  // Calculate parlay picks for a round - returns set of match slots that should be highlighted
+  const getParlayPicks = (round: Round): Set<number> => {
+    // Get matches with predictions, sorted by confidence (highest first)
+    const matchesWithPredictions = round.matches
+      .filter(m => m.prediction && (m.status === 'predicted' || m.status === 'completed'))
+      .sort((a, b) => (b.prediction?.confidence || 0) - (a.prediction?.confidence || 0))
+
+    // Need at least 3 matches for a parlay
+    if (matchesWithPredictions.length < 3) {
+      return new Set()
+    }
+
+    // Select top 3 highest confidence picks for the parlay
+    // "What would ASHE do?" - pick the most confident selections
+    const parlayMatches = matchesWithPredictions.slice(0, 3)
+    return new Set(parlayMatches.map(m => m.slot))
+  }
+
+  // Check if a round can have parlay (has 3+ predictions and is not the Final)
+  const canShowParlay = (round: Round): boolean => {
+    if (round.name === 'F') return false // Final has only 1 match
+    const predictedCount = round.matches.filter(
+      m => m.prediction && (m.status === 'predicted' || m.status === 'completed')
+    ).length
+    return predictedCount >= 3
+  }
 
   // Fetch ticker data filtered to this tournament
   useEffect(() => {
@@ -463,29 +503,50 @@ export default function DrawSheet({
             </div>
           ) : drawData?.rounds ? (
             <>
-              {drawData.rounds.map((round, roundIndex) => (
-                <div key={round.name} className="round-column">
-                  <div className="round-header">{round.display_name}</div>
-                  <div
-                    className="round-matches"
-                    style={{
-                      gap: `${Math.pow(2, roundIndex) * 8}px`
-                    }}
-                  >
-                    {round.matches.map((match) => (
-                      <div key={match.slot} className="match-wrapper">
-                        <MatchCard match={match} />
-                        {/* Connector lines */}
-                        {roundIndex < drawData.rounds.length - 1 && (
-                          <div className="connector">
-                            <div className="connector-line" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
+              {drawData.rounds.map((round, roundIndex) => {
+                const isParlayActive = parlayRound === round.name
+                const parlayPicks = isParlayActive ? getParlayPicks(round) : new Set<number>()
+                const showParlayButton = canUseParlay && canShowParlay(round)
+                const effectiveTour = drawData.tournament.tour || tour || 'ATP'
+                const parlayButtonClass = effectiveTour === 'WTA' ? 'parlay-btn-wta' : 'parlay-btn-atp'
+
+                return (
+                  <div key={round.name} className="round-column">
+                    <div className="round-header">{round.display_name}</div>
+                    {showParlayButton && (
+                      <button
+                        className={`parlay-btn ${parlayButtonClass} ${isParlayActive ? 'active' : ''}`}
+                        onClick={() => setParlayRound(isParlayActive ? null : round.name)}
+                        title="What would ASHE do? Select top 3 highest confidence picks for a parlay"
+                      >
+                        {isParlayActive ? '✓ Parlay' : 'Parlay'}
+                      </button>
+                    )}
+                    <div
+                      className="round-matches"
+                      style={{
+                        gap: `${Math.pow(2, roundIndex) * 8}px`
+                      }}
+                    >
+                      {round.matches.map((match) => (
+                        <div key={match.slot} className="match-wrapper">
+                          <MatchCard
+                            match={match}
+                            parlayHighlight={parlayPicks.has(match.slot)}
+                            tour={effectiveTour}
+                          />
+                          {/* Connector lines */}
+                          {roundIndex < drawData.rounds.length - 1 && (
+                            <div className="connector">
+                              <div className="connector-line" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </>
           ) : (
             <div className="draw-empty">
