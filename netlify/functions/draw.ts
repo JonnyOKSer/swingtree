@@ -350,15 +350,11 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // Build a set of existing matches (by player pair + round) to avoid duplicates
     // Include round in the key so that matches in different rounds are not considered duplicates
     const existingMatches = new Set<string>()
-    let bucsaFoundIn: string | null = null
     for (const round of Object.keys(drawByRound)) {
       for (const match of drawByRound[round]) {
         const playerKey = [getLastName(match.player_1_name), getLastName(match.player_2_name)].sort().join('|')
         const key = `${round}|${playerKey}`
         existingMatches.add(key)
-        if (playerKey === 'bucsa|starodubtseva') {
-          bucsaFoundIn = `${round}: ${match.player_1_name} vs ${match.player_2_name} (source: ${match.source || 'api-tennis'})`
-        }
       }
     }
 
@@ -839,22 +835,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       rounds
     }
 
-    // Sample of existing match keys for debugging
-    const existingMatchesSample = Array.from(existingMatches).slice(0, 10)
-
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({
-        success: true,
-        ...draw,
-        _debug: {
-          espnMatchCount: espnMatches.length,
-          espnAdded,
-          roundCounts: Object.fromEntries(Object.entries(drawByRound).map(([k, v]) => [k, v.length])),
-          bucsaFoundIn
-        }
-      })
+      body: JSON.stringify({ success: true, ...draw })
     }
   } catch (error) {
     console.error('Error fetching draw:', error)
