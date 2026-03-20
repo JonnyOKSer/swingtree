@@ -339,14 +339,16 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       return parts[parts.length - 1]
     }
 
-    // Build a set of existing matches (by player pair) to avoid duplicates
+    // Build a set of existing matches (by player pair + round) to avoid duplicates
+    // Include round in the key so that matches in different rounds are not considered duplicates
     const existingMatches = new Set<string>()
     let bucsaFoundIn: string | null = null
     for (const round of Object.keys(drawByRound)) {
       for (const match of drawByRound[round]) {
-        const key = [getLastName(match.player_1_name), getLastName(match.player_2_name)].sort().join('|')
+        const playerKey = [getLastName(match.player_1_name), getLastName(match.player_2_name)].sort().join('|')
+        const key = `${round}|${playerKey}`
         existingMatches.add(key)
-        if (key === 'bucsa|starodubtseva') {
+        if (playerKey === 'bucsa|starodubtseva') {
           bucsaFoundIn = `${round}: ${match.player_1_name} vs ${match.player_2_name} (source: ${match.source || 'api-tennis'})`
         }
       }
@@ -354,20 +356,11 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     // Add ESPN matches that are missing from api-tennis
     let espnAdded = 0
-    const espnDebug: Array<{players: string, key: string, exists: boolean}> = []
     for (const espnMatch of espnMatches) {
-      const key = [getLastName(espnMatch.player1), getLastName(espnMatch.player2)].sort().join('|')
+      const playerKey = [getLastName(espnMatch.player1), getLastName(espnMatch.player2)].sort().join('|')
+      const key = `${espnMatch.round}|${playerKey}`
 
-      // Log first 5 ESPN matches for debugging
-      if (espnDebug.length < 5) {
-        espnDebug.push({
-          players: `${espnMatch.player1} vs ${espnMatch.player2}`,
-          key,
-          exists: existingMatches.has(key)
-        })
-      }
-
-      // Skip if this match already exists in draw_matches
+      // Skip if this match already exists in draw_matches (same round + players)
       if (existingMatches.has(key)) continue
 
       // Add to drawByRound
@@ -376,7 +369,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       }
 
       drawByRound[espnMatch.round].push({
-        match_key: `espn_${key}_${espnMatch.round}`,
+        match_key: `espn_${playerKey}_${espnMatch.round}`,
         round: espnMatch.round,
         player_1_name: espnMatch.player1,
         player_2_name: espnMatch.player2,
