@@ -133,8 +133,7 @@ const handler: Handler = async (event: HandlerEvent) => {
           SET status = 'finished',
               winner_key = COALESCE($2, winner_key),
               winner_name = COALESCE($3, winner_name),
-              final_result = COALESCE($4, final_result),
-              updated_at = NOW()
+              final_result = COALESCE($4, final_result)
           WHERE match_key = $1
         `, [match.match_key, winnerKey, winnerName, fixture.event_final_result]);
 
