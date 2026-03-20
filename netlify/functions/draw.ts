@@ -341,10 +341,14 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     // Build a set of existing matches (by player pair) to avoid duplicates
     const existingMatches = new Set<string>()
+    let bucsaFoundIn: string | null = null
     for (const round of Object.keys(drawByRound)) {
       for (const match of drawByRound[round]) {
         const key = [getLastName(match.player_1_name), getLastName(match.player_2_name)].sort().join('|')
         existingMatches.add(key)
+        if (key === 'bucsa|starodubtseva') {
+          bucsaFoundIn = `${round}: ${match.player_1_name} vs ${match.player_2_name} (source: ${match.source || 'api-tennis'})`
+        }
       }
     }
 
@@ -846,7 +850,8 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           espnAdded,
           apiTennisR64Count: (drawByRound['R64'] || []).length,
           espnDebug,
-          existingMatchesSample
+          existingMatchesSample,
+          bucsaFoundIn
         }
       })
     }
