@@ -148,21 +148,20 @@ const handler: Handler = async (event: HandlerEvent) => {
         }
       }
 
-      // Try to update existing UNKNOWN match or insert new one
+      // Update the UNKNOWN match with correct round (don't change match_key to avoid conflicts)
       const updateResult = await pool.query(`
         UPDATE draw_matches
-        SET match_key = $1,
-            round_normalized = $2,
-            round_raw = $3,
-            status = $4,
-            winner_key = COALESCE($5, winner_key),
-            winner_name = COALESCE($6, winner_name),
-            final_result = COALESCE($7, final_result),
-            event_key = $8
-        WHERE match_key = $9
+        SET round_normalized = $1,
+            round_raw = $2,
+            status = $3,
+            winner_key = COALESCE($4, winner_key),
+            winner_name = COALESCE($5, winner_name),
+            final_result = COALESCE($6, final_result),
+            event_key = $7
+        WHERE match_key = $8
         RETURNING match_key
       `, [
-        newMatchKey, roundNormalized, fixture.tournament_round,
+        roundNormalized, fixture.tournament_round,
         status, winnerKey, winnerName, fixture.event_final_result,
         fixture.event_key, oldMatchKey
       ]);
