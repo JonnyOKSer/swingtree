@@ -67,6 +67,26 @@ interface WageringInsight {
   confidence: 'HIGH' | 'MEDIUM' | 'LOW'
 }
 
+interface ModelStats {
+  modelName: string
+  modelVersion: string
+  totalPredictions: number
+  fsWinner: { total: number; correct: number; accuracy: number }
+  fsScore: { total: number; correct: number; accuracy: number }
+  fsOverUnder: { total: number; correct: number; accuracy: number }
+  byScoreCategory: { [score: string]: { predicted: number; correct: number; accuracy: number } }
+  calibration: Array<{ bucket: number; predictedProb: number; actualProb: number; count: number }>
+  isProduction: boolean
+}
+
+interface ModelComparisonData {
+  stats: ModelStats[]
+  summary: {
+    totalMatches: number
+    dateRange: { start: string; end: string }
+  }
+}
+
 interface RoundPattern {
   round: string
   tour?: string
@@ -163,6 +183,12 @@ export default function Admin() {
   // Wagering strategies
   const [wageringInsights, setWageringInsights] = useState<WageringAnalysis | null>(null)
   const [loadingWagering, setLoadingWagering] = useState(false)
+
+  // Model comparison
+  const [modelComparison, setModelComparison] = useState<ModelComparisonData | null>(null)
+  const [loadingModels, setLoadingModels] = useState(false)
+  const [modelDays, setModelDays] = useState(30)
+  const [modelTour, setModelTour] = useState<string>('')
 
   // Cron status
   const [cronStatus, setCronStatus] = useState<{
@@ -264,6 +290,25 @@ export default function Admin() {
       console.error('Failed to fetch wagering insights')
     } finally {
       setLoadingWagering(false)
+    }
+  }
+
+  const fetchModelComparison = async () => {
+    setLoadingModels(true)
+    try {
+      const params = new URLSearchParams({ days: modelDays.toString() })
+      if (modelTour) params.append('tour', modelTour)
+      const response = await fetch(`/api/model-comparison?${params}`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setModelComparison({ stats: data.stats, summary: data.summary })
+        }
+      }
+    } catch {
+      console.error('Failed to fetch model comparison')
+    } finally {
+      setLoadingModels(false)
     }
   }
 
@@ -582,6 +627,124 @@ export default function Admin() {
           </div>
         ) : (
           <p>No stats available</p>
+        )}
+      </section>
+
+      {/* Model Comparison Section */}
+      <section className="admin-section model-comparison-section">
+        <div className="accuracy-header">
+          <h2>First Set Model Comparison</h2>
+          <div className="model-filters">
+            <select
+              value={modelDays}
+              onChange={e => setModelDays(parseInt(e.target.value))}
+              className="model-filter-select"
+            >
+              <option value={7}>7 days</option>
+              <option value={30}>30 days</option>
+              <option value={90}>90 days</option>
+            </select>
+            <select
+              value={modelTour}
+              onChange={e => setModelTour(e.target.value)}
+              className="model-filter-select"
+            >
+              <option value="">All Tours</option>
+              <option value="ATP">ATP</option>
+              <option value="WTA">WTA</option>
+            </select>
+            <button
+              className="refresh-btn small"
+              onClick={fetchModelComparison}
+              disabled={loadingModels}
+              title="Refresh model comparison"
+            >
+              {loadingModels ? '↻' : '⟳'}
+            </button>
+          </div>
+        </div>
+
+        {modelComparison?.summary && (
+          <p className="model-summary">
+            {modelComparison.summary.totalMatches} matches from {modelComparison.summary.dateRange.start} to {modelComparison.summary.dateRange.end}
+          </p>
+        )}
+
+        {loadingModels && !modelComparison ? (
+          <p>Loading model comparison...</p>
+        ) : modelComparison?.stats?.length ? (
+          <div className="model-comparison-content">
+            {/* Model Summary Cards */}
+            <div className="model-cards">
+              {modelComparison.stats.map(model => (
+                <div
+                  key={model.modelName}
+                  className={`model-card ${model.isProduction ? 'production' : ''}`}
+                >
+                  <div className="model-card-header">
+                    <span className="model-name">{model.modelName}</span>
+                    {model.isProduction && <span className="production-badge">PRODUCTION</span>}
+                  </div>
+                  <div className="model-card-stats">
+                    <div className="model-stat">
+                      <span className="model-stat-label">FS Winner</span>
+                      <span className="model-stat-value">{model.fsWinner.accuracy}%</span>
+                      <span className="model-stat-detail">{model.fsWinner.correct}/{model.fsWinner.total}</span>
+                    </div>
+                    <div className="model-stat">
+                      <span className="model-stat-label">FS Score</span>
+                      <span className="model-stat-value">{model.fsScore.accuracy}%</span>
+                      <span className="model-stat-detail">{model.fsScore.correct}/{model.fsScore.total}</span>
+                    </div>
+                    <div className="model-stat">
+                      <span className="model-stat-label">O/U 9.5</span>
+                      <span className="model-stat-value">{model.fsOverUnder.accuracy}%</span>
+                      <span className="model-stat-detail">{model.fsOverUnder.correct}/{model.fsOverUnder.total}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Score Category Comparison Table */}
+            <div className="score-category-table-wrapper">
+              <h3>Score Category Accuracy</h3>
+              <table className="accuracy-table score-category-table">
+                <thead>
+                  <tr>
+                    <th>Score</th>
+                    {modelComparison.stats.map(m => (
+                      <th key={m.modelName}>{m.modelName}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {['6-0', '6-1', '6-2', '6-3', '6-4', '7-5', '7-6'].map(score => (
+                    <tr key={score}>
+                      <td className="score-label">{score}</td>
+                      {modelComparison.stats.map(m => {
+                        const cat = m.byScoreCategory[score]
+                        return (
+                          <td key={m.modelName} className="score-cell">
+                            {cat ? (
+                              <>
+                                <span className="score-accuracy">{cat.accuracy}%</span>
+                                <span className="score-detail">({cat.correct}/{cat.predicted})</span>
+                              </>
+                            ) : (
+                              <span className="no-data">-</span>
+                            )}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <p className="no-model-data">No model comparison data available. Models need reconciled predictions to compare.</p>
         )}
       </section>
 
