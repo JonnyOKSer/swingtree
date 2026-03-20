@@ -848,9 +848,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         _debug: {
           espnMatchCount: espnMatches.length,
           espnAdded,
-          apiTennisR64Count: (drawByRound['R64'] || []).length,
-          espnDebug,
-          existingMatchesSample,
+          roundCounts: Object.fromEntries(Object.entries(drawByRound).map(([k, v]) => [k, v.length])),
           bucsaFoundIn
         }
       })
