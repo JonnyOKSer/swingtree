@@ -899,7 +899,11 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ success: true, ...draw })
+      body: JSON.stringify({
+        success: true,
+        ...draw,
+        _debug: { duplicates: duplicates.slice(0, 10), espnAdded, espnMoved }
+      })
     }
   } catch (error) {
     console.error('Error fetching draw:', error)
