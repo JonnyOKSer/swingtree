@@ -382,13 +382,38 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       return [ln1, ln2].sort().join('|')
     }
 
+    // Map rounds to equivalent rounds based on draw size differences
+    // ESPN might call it "Round 2" (R64 for 128-draw) but api-tennis calls it R32 (for 64-draw view)
+    const getEquivalentRounds = (round: string): string[] => {
+      const equivalents: Record<string, string[]> = {
+        'R128': ['R128', 'R64'],     // R128 in 128-draw = R64 in 64-draw
+        'R64': ['R64', 'R32', 'R128'], // R64 could be R32 in smaller draw or R128 in larger
+        'R32': ['R32', 'R16', 'R64'], // R32 could be R16 or R64 depending on draw
+        'R16': ['R16', 'R32', 'QF'],  // Similar flexibility
+        'QF': ['QF'],
+        'SF': ['SF'],
+        'F': ['F']
+      }
+      return equivalents[round] || [round]
+    }
+
     const predictionLookup: Record<string, any> = {}
     const partialLookup: Record<string, any> = {}
     const playerOnlyLookup: Record<string, any> = {}  // Fallback: match by players only
     for (const round of Object.keys(predictionsByRound)) {
       for (const pred of predictionsByRound[round]) {
+        // Add to primary lookup
         const key = makeMatchKey(pred.player1_name, pred.player2_name, round)
         predictionLookup[key] = pred
+
+        // Also add to equivalent round lookups for draw size flexibility
+        for (const equivRound of getEquivalentRounds(round)) {
+          if (equivRound !== round) {
+            const equivKey = makeMatchKey(pred.player1_name, pred.player2_name, equivRound)
+            if (!predictionLookup[equivKey]) predictionLookup[equivKey] = pred
+          }
+        }
+
         const partialKey = makePartialKey(pred.player1_name, pred.player2_name, round)
         if (!partialLookup[partialKey]) partialLookup[partialKey] = pred
         // Player-only lookup (no round) - use most recent prediction if multiple
