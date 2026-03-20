@@ -347,33 +347,43 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     const espnMatches = await fetchESPNMatches(tournamentSlug, tour)
     console.log(`Found ${espnMatches.length} ESPN matches for ${tournamentSlug} (${tour})`)
 
-    // Build a set of existing matches (by player pair + round) to avoid duplicates
-    // Include round in the key so that matches in different rounds are not considered duplicates
-    const existingMatches = new Set<string>()
+    // Track which player pairs exist in which rounds (for deduplication)
+    // Map: playerKey -> round where they appear
+    const playerRoundMap = new Map<string, string>()
     for (const round of Object.keys(drawByRound)) {
       for (const match of drawByRound[round]) {
         const playerKey = [getLastName(match.player_1_name), getLastName(match.player_2_name)].sort().join('|')
-        const key = `${round}|${playerKey}`
-        existingMatches.add(key)
+        // If players already in a different round, keep only the later round (more recent)
+        const existingRound = playerRoundMap.get(playerKey)
+        if (!existingRound) {
+          playerRoundMap.set(playerKey, round)
+        }
       }
     }
 
-    // Add ESPN matches that are missing from api-tennis
+    // Add ESPN matches - they have accurate round info
+    // If ESPN says match is in round X but api-tennis has it in round Y, use ESPN's round
     let espnAdded = 0
     for (const espnMatch of espnMatches) {
       const playerKey = [getLastName(espnMatch.player1), getLastName(espnMatch.player2)].sort().join('|')
-      const key = `${espnMatch.round}|${playerKey}`
+      const existingRound = playerRoundMap.get(playerKey)
 
-      // Skip if this match already exists in draw_matches (same round + players)
-      if (existingMatches.has(key)) continue
+      // If match exists in the SAME round, skip (already have it)
+      if (existingRound === espnMatch.round) continue
 
-      // Add to drawByRound
+      // If match exists in a DIFFERENT round, remove it from there (api-tennis has wrong round)
+      if (existingRound && existingRound !== espnMatch.round) {
+        drawByRound[existingRound] = drawByRound[existingRound].filter(m => {
+          const mKey = [getLastName(m.player_1_name), getLastName(m.player_2_name)].sort().join('|')
+          return mKey !== playerKey
+        })
+      }
+
+      // Add to correct round from ESPN
       if (!drawByRound[espnMatch.round]) {
         drawByRound[espnMatch.round] = []
       }
 
-      // Insert ESPN matches at beginning - they have accurate round/schedule info
-      // api-tennis often has stale or misassigned rounds
       drawByRound[espnMatch.round].unshift({
         match_key: `espn_${playerKey}_${espnMatch.round}`,
         round: espnMatch.round,
@@ -382,15 +392,15 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         status: espnMatch.status === 'live' ? 'live' : 'upcoming',
         winner_name: null,
         final_result: null,
-        source: 'espn' // Mark source for debugging
+        source: 'espn'
       })
 
-      existingMatches.add(key)
+      playerRoundMap.set(playerKey, espnMatch.round)
       espnAdded++
     }
 
     if (espnAdded > 0) {
-      console.log(`Added ${espnAdded} matches from ESPN (missing from api-tennis)`)
+      console.log(`Added ${espnAdded} matches from ESPN, corrected round assignments`)
     }
 
     // Step 3b: Get ASHE predictions - search by any alias name
