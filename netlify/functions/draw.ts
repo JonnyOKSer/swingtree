@@ -359,6 +359,20 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       }
     }
 
+    // First, remove corrupted matches where both players have the same last name
+    // (This happens when api-tennis data has errors like "Linette vs Linette")
+    for (const round of Object.keys(drawByRound)) {
+      drawByRound[round] = drawByRound[round].filter(m => {
+        const ln1 = getLastName(m.player_1_name)
+        const ln2 = getLastName(m.player_2_name)
+        if (ln1 && ln2 && ln1 === ln2) {
+          console.log(`Removing corrupted match: ${m.player_1_name} vs ${m.player_2_name} in ${round}`)
+          return false
+        }
+        return true
+      })
+    }
+
     // Use ESPN to correct round assignments and add missing matches
     // ESPN has accurate round info; api-tennis sometimes has matches in wrong rounds
     let espnAdded = 0
@@ -389,25 +403,23 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       // If match exists in a DIFFERENT round, we need to add it to the correct round
       // (duplicates were already removed above)
       if (existingRound && existingRound !== espnMatch.round) {
-        // The match was removed from the wrong round - need to add to correct round
-        // Try to find match data that was saved before removal (with results)
-        // Since we already removed, just add a new ESPN entry
         if (!drawByRound[espnMatch.round]) {
           drawByRound[espnMatch.round] = []
         }
-        // Check if match already exists in target round (from api-tennis)
+        // Check if match already exists in target round with correct player names
         const existsInTarget = drawByRound[espnMatch.round].some(m => {
           const mKey = [getLastName(m.player_1_name), getLastName(m.player_2_name)].sort().join('|')
           return mKey === playerKey
         })
-        if (!existsInTarget && espnMatch.status !== 'finished') {
+        if (!existsInTarget) {
+          // Add ESPN entry (even for finished - to fix corrupted api-tennis data)
           drawByRound[espnMatch.round].unshift({
             match_key: `espn_${playerKey}_${espnMatch.round}`,
             round: espnMatch.round,
             player_1_name: espnMatch.player1,
             player_2_name: espnMatch.player2,
-            status: espnMatch.status === 'live' ? 'live' : 'upcoming',
-            winner_name: null,
+            status: espnMatch.status === 'live' ? 'live' : (espnMatch.status === 'finished' ? 'finished' : 'upcoming'),
+            winner_name: espnMatch.status === 'finished' ? espnMatch.player1 : null, // ESPN lists winner first for finished
             final_result: null,
             source: 'espn'
           })
