@@ -104,6 +104,24 @@ const handler: Handler = async (event: HandlerEvent) => {
   }
 
   try {
+    // Debug: Return early with diagnostic info
+    const testQuery = await pool.query(`SELECT COUNT(*) as count FROM draw_matches WHERE status = 'live'`);
+    const liveCount = testQuery.rows[0]?.count || 0;
+
+    // If no live matches, return early
+    if (liveCount === 0) {
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          success: true,
+          message: "No live matches to update",
+          updated: 0,
+          debug: { liveCount, apiKeySet: !!apiKey }
+        })
+      };
+    }
+
     // Get all matches currently marked as "live"
     const liveMatches = await pool.query(`
       SELECT match_key, event_key, player_1_name, player_2_name, tournament_name
