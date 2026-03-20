@@ -370,48 +370,54 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       const playerKey = [getLastName(espnMatch.player1), getLastName(espnMatch.player2)].sort().join('|')
       const existingRound = playerRoundMap.get(playerKey)
 
-      // If match exists in the SAME round, skip (already have it)
-      if (existingRound === espnMatch.round) continue
+      // Always clean up duplicates from wrong rounds, even if match exists in correct round
+      // Remove this player pair from ALL rounds except the ESPN-specified round
+      let removedFromOtherRounds = false
+      for (const round of Object.keys(drawByRound)) {
+        if (round === espnMatch.round) continue
+        const before = drawByRound[round].length
+        drawByRound[round] = drawByRound[round].filter(m => {
+          const mKey = [getLastName(m.player_1_name), getLastName(m.player_2_name)].sort().join('|')
+          return mKey !== playerKey
+        })
+        if (drawByRound[round].length < before) removedFromOtherRounds = true
+      }
 
-      // If match exists in a DIFFERENT round, MOVE it to correct round (per ESPN)
-      // Also remove any duplicates of this player pair from ALL other rounds
+      // If match already exists in the correct round, we're done (just cleaned up duplicates)
+      if (existingRound === espnMatch.round) {
+        if (removedFromOtherRounds) espnMoved++
+        continue
+      }
+
+      // If match exists in a DIFFERENT round, we need to add it to the correct round
+      // (duplicates were already removed above)
       if (existingRound && existingRound !== espnMatch.round) {
-        // Find the api-tennis match to move (prefer one with results)
-        let matchToMove: any = null
-        for (const round of Object.keys(drawByRound)) {
-          if (round === espnMatch.round) continue // Don't look in target round
-          const found = drawByRound[round]?.find(m => {
-            const mKey = [getLastName(m.player_1_name), getLastName(m.player_2_name)].sort().join('|')
-            return mKey === playerKey
+        // The match was removed from the wrong round - need to add to correct round
+        // Try to find match data that was saved before removal (with results)
+        // Since we already removed, just add a new ESPN entry
+        if (!drawByRound[espnMatch.round]) {
+          drawByRound[espnMatch.round] = []
+        }
+        // Check if match already exists in target round (from api-tennis)
+        const existsInTarget = drawByRound[espnMatch.round].some(m => {
+          const mKey = [getLastName(m.player_1_name), getLastName(m.player_2_name)].sort().join('|')
+          return mKey === playerKey
+        })
+        if (!existsInTarget && espnMatch.status !== 'finished') {
+          drawByRound[espnMatch.round].unshift({
+            match_key: `espn_${playerKey}_${espnMatch.round}`,
+            round: espnMatch.round,
+            player_1_name: espnMatch.player1,
+            player_2_name: espnMatch.player2,
+            status: espnMatch.status === 'live' ? 'live' : 'upcoming',
+            winner_name: null,
+            final_result: null,
+            source: 'espn'
           })
-          if (found) {
-            // Prefer match with results (winner_name)
-            if (!matchToMove || found.winner_name) {
-              matchToMove = found
-            }
-          }
+          espnAdded++
         }
-
-        // Remove this player pair from ALL rounds except target
-        for (const round of Object.keys(drawByRound)) {
-          if (round === espnMatch.round) continue
-          drawByRound[round] = drawByRound[round].filter(m => {
-            const mKey = [getLastName(m.player_1_name), getLastName(m.player_2_name)].sort().join('|')
-            return mKey !== playerKey
-          })
-        }
-
-        if (matchToMove) {
-          // Add to correct round (keep api-tennis data with results)
-          if (!drawByRound[espnMatch.round]) {
-            drawByRound[espnMatch.round] = []
-          }
-          matchToMove.round = espnMatch.round
-          drawByRound[espnMatch.round].unshift(matchToMove)
-          playerRoundMap.set(playerKey, espnMatch.round)
-          espnMoved++
-          continue
-        }
+        playerRoundMap.set(playerKey, espnMatch.round)
+        continue
       }
 
       // No existing match - add new ESPN match (for upcoming/live matches only)
