@@ -53,9 +53,7 @@ async function fetchESPNMatches(tournamentName: string, tour: string): Promise<A
           if (stateStr === 'post') status = 'finished'
           else if (stateStr === 'in') status = 'live'
 
-          // Only include upcoming/live matches (finished ones should come from api-tennis)
-          if (status === 'finished') continue
-
+          // Include all matches - even finished ones help correct api-tennis round assignments
           // Normalize round name from comp.round.displayName (e.g., "Round 2", "Quarterfinals")
           const roundName = comp.round?.displayName || ''
           let round = 'R32' // default
@@ -361,9 +359,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       }
     }
 
-    // Add ESPN matches - they have accurate round info
-    // If ESPN says match is in round X but api-tennis has it in round Y, use ESPN's round
+    // Use ESPN to correct round assignments and add missing matches
+    // ESPN has accurate round info; api-tennis sometimes has matches in wrong rounds
     let espnAdded = 0
+    let espnMoved = 0
     for (const espnMatch of espnMatches) {
       const playerKey = [getLastName(espnMatch.player1), getLastName(espnMatch.player2)].sort().join('|')
       const existingRound = playerRoundMap.get(playerKey)
@@ -371,15 +370,36 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       // If match exists in the SAME round, skip (already have it)
       if (existingRound === espnMatch.round) continue
 
-      // If match exists in a DIFFERENT round, remove it from there (api-tennis has wrong round)
+      // If match exists in a DIFFERENT round, MOVE it to correct round (per ESPN)
       if (existingRound && existingRound !== espnMatch.round) {
-        drawByRound[existingRound] = drawByRound[existingRound].filter(m => {
+        // Find the api-tennis match to move
+        const matchToMove = drawByRound[existingRound]?.find(m => {
           const mKey = [getLastName(m.player_1_name), getLastName(m.player_2_name)].sort().join('|')
-          return mKey !== playerKey
+          return mKey === playerKey
         })
+
+        if (matchToMove) {
+          // Remove from wrong round
+          drawByRound[existingRound] = drawByRound[existingRound].filter(m => {
+            const mKey = [getLastName(m.player_1_name), getLastName(m.player_2_name)].sort().join('|')
+            return mKey !== playerKey
+          })
+
+          // Add to correct round (keep api-tennis data with results)
+          if (!drawByRound[espnMatch.round]) {
+            drawByRound[espnMatch.round] = []
+          }
+          matchToMove.round = espnMatch.round
+          drawByRound[espnMatch.round].unshift(matchToMove)
+          playerRoundMap.set(playerKey, espnMatch.round)
+          espnMoved++
+          continue
+        }
       }
 
-      // Add to correct round from ESPN
+      // No existing match - add new ESPN match (for upcoming/live matches only)
+      if (espnMatch.status === 'finished') continue
+
       if (!drawByRound[espnMatch.round]) {
         drawByRound[espnMatch.round] = []
       }
@@ -399,8 +419,8 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       espnAdded++
     }
 
-    if (espnAdded > 0) {
-      console.log(`Added ${espnAdded} matches from ESPN, corrected round assignments`)
+    if (espnAdded > 0 || espnMoved > 0) {
+      console.log(`ESPN: added ${espnAdded} matches, moved ${espnMoved} to correct rounds`)
     }
 
     // Step 3b: Get ASHE predictions - search by any alias name
