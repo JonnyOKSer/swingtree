@@ -1006,3 +1006,152 @@
     min-width: auto;
   }
 }
+
+/* Cron Status Section */
+.cron-section {
+  margin-bottom: 32px;
+}
+
+.cron-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.cron-header h2 {
+  margin: 0;
+}
+
+.cron-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cron-summary {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.cron-status-badge {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.cron-status-badge.healthy {
+  background: rgba(129, 199, 132, 0.15);
+  border: 1px solid #81c784;
+  color: #81c784;
+}
+
+.cron-status-badge.needs_attention {
+  background: rgba(229, 115, 115, 0.15);
+  border: 1px solid #e57373;
+  color: #e57373;
+}
+
+.cron-stats {
+  display: flex;
+  gap: 20px;
+  font-size: 13px;
+  color: var(--ash-grey);
+}
+
+.cron-stats strong {
+  color: var(--flash-white);
+}
+
+.cron-last-runs h4,
+.cron-recent h4 {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ash-grey);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 0 10px 0;
+}
+
+.last-runs-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.last-run-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+}
+
+.cron-name {
+  font-size: 11px;
+  color: var(--serengeti-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cron-time {
+  font-size: 11px;
+  color: var(--ash-grey);
+}
+
+.cron-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.cron-table th,
+.cron-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+.cron-table th {
+  color: var(--ash-grey);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 10px;
+}
+
+.cron-table td {
+  color: var(--flash-white);
+}
+
+.cron-table tr.success td:nth-child(3) {
+  color: #81c784;
+}
+
+.cron-table tr.failed td:nth-child(3) {
+  color: #e57373;
+}
+
+.cron-table tr.failed {
+  background: rgba(229, 115, 115, 0.05);
+}
+
+.cron-table .error-cell {
+  color: #e57373;
+  font-size: 11px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cron-loading {
+  font-size: 13px;
+  color: var(--ash-grey);
+  padding: 16px 0;
+}

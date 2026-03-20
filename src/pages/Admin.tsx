@@ -164,6 +164,21 @@ export default function Admin() {
   const [wageringInsights, setWageringInsights] = useState<WageringAnalysis | null>(null)
   const [loadingWagering, setLoadingWagering] = useState(false)
 
+  // Cron status
+  const [cronStatus, setCronStatus] = useState<{
+    today: string
+    predictions_today: number
+    unreconciled_3d: number
+    status: string
+    last_successful_runs: Record<string, string>
+    recent_runs: Array<{
+      cron: string
+      ran_at: string
+      success: boolean
+      error: string | null
+    }>
+  } | null>(null)
+
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       navigate('/')
@@ -190,8 +205,25 @@ export default function Admin() {
       })
       clearTimeout(timeout)
       setSystemHealth({ railway: response.ok ? 'online' : 'offline' })
+
+      // Also fetch cron status
+      if (response.ok) {
+        fetchCronStatus()
+      }
     } catch {
       setSystemHealth({ railway: 'offline' })
+    }
+  }
+
+  const fetchCronStatus = async () => {
+    try {
+      const response = await fetch('https://agent-production-765b.up.railway.app/cron/status')
+      if (response.ok) {
+        const data = await response.json()
+        setCronStatus(data)
+      }
+    } catch {
+      console.error('Failed to fetch cron status')
     }
   }
 
@@ -914,6 +946,76 @@ export default function Admin() {
               <p className="no-insights">No significant patterns found. Need more reconciled predictions.</p>
             )}
           </div>
+        )}
+      </section>
+
+      {/* Cron Status */}
+      <section className="admin-section cron-section">
+        <div className="cron-header">
+          <h2>Cron Jobs</h2>
+          <button
+            className="refresh-btn small"
+            onClick={fetchCronStatus}
+            title="Refresh cron status"
+          >
+            ⟳
+          </button>
+        </div>
+
+        {cronStatus ? (
+          <div className="cron-content">
+            <div className="cron-summary">
+              <div className={`cron-status-badge ${cronStatus.status}`}>
+                {cronStatus.status === 'healthy' ? '✓ Healthy' : '⚠ Needs Attention'}
+              </div>
+              <div className="cron-stats">
+                <span>Predictions Today: <strong>{cronStatus.predictions_today}</strong></span>
+                <span>Unreconciled (3d): <strong>{cronStatus.unreconciled_3d}</strong></span>
+              </div>
+            </div>
+
+            {cronStatus.last_successful_runs && Object.keys(cronStatus.last_successful_runs).length > 0 && (
+              <div className="cron-last-runs">
+                <h4>Last Successful Runs</h4>
+                <div className="last-runs-grid">
+                  {Object.entries(cronStatus.last_successful_runs).map(([cron, time]) => (
+                    <div key={cron} className="last-run-item">
+                      <span className="cron-name">{cron}</span>
+                      <span className="cron-time">{time ? new Date(time).toLocaleString() : 'Never'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {cronStatus.recent_runs && cronStatus.recent_runs.length > 0 && (
+              <div className="cron-recent">
+                <h4>Recent Runs</h4>
+                <table className="cron-table">
+                  <thead>
+                    <tr>
+                      <th>Cron</th>
+                      <th>Time</th>
+                      <th>Status</th>
+                      <th>Error</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cronStatus.recent_runs.slice(0, 10).map((run, i) => (
+                      <tr key={i} className={run.success ? 'success' : 'failed'}>
+                        <td>{run.cron}</td>
+                        <td>{new Date(run.ran_at).toLocaleString()}</td>
+                        <td>{run.success ? '✓' : '✗'}</td>
+                        <td className="error-cell">{run.error || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="cron-loading">Loading cron status... (requires Railway deployment)</p>
         )}
       </section>
 
