@@ -359,6 +359,9 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       }
     }
 
+    // Debug: show round counts before ESPN processing
+    console.log('Before ESPN:', Object.fromEntries(Object.entries(drawByRound).map(([k, v]) => [k, v.length])))
+
     // Use ESPN to correct round assignments and add missing matches
     // ESPN has accurate round info; api-tennis sometimes has matches in wrong rounds
     let espnAdded = 0
@@ -435,6 +438,20 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     if (espnAdded > 0 || espnMoved > 0) {
       console.log(`ESPN: added ${espnAdded} matches, moved ${espnMoved} to correct rounds`)
+    }
+
+    // Debug: check for duplicate player pairs across rounds
+    const allPlayerKeys = new Map<string, string[]>()
+    for (const round of Object.keys(drawByRound)) {
+      for (const match of drawByRound[round]) {
+        const pk = [getLastName(match.player_1_name), getLastName(match.player_2_name)].sort().join('|')
+        if (!allPlayerKeys.has(pk)) allPlayerKeys.set(pk, [])
+        allPlayerKeys.get(pk)!.push(round)
+      }
+    }
+    const duplicates = [...allPlayerKeys.entries()].filter(([_, rounds]) => rounds.length > 1)
+    if (duplicates.length > 0) {
+      console.log('WARNING: Duplicate player pairs across rounds:', duplicates.slice(0, 5))
     }
 
     // Step 3b: Get ASHE predictions - search by any alias name
