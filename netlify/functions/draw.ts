@@ -904,13 +904,27 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       rounds
     }
 
+    // Debug: find corrupted matches in final display
+    const corruptedInDisplay: any[] = []
+    for (const round of draw.rounds) {
+      for (const m of round.matches) {
+        if (m.player1 && m.player2 && m.player1 !== 'TBD' && m.player2 !== 'TBD' && m.player1 !== 'Bye' && m.player2 !== 'Bye') {
+          const ln1 = extractLastName(m.player1)
+          const ln2 = extractLastName(m.player2)
+          if (ln1 === ln2) {
+            corruptedInDisplay.push({ round: round.name, slot: m.slot, p1: m.player1, p2: m.player2 })
+          }
+        }
+      }
+    }
+
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
         ...draw,
-        _debug: { removedCorrupted, espnAdded, espnMoved }
+        _debug: { removedCorrupted, espnAdded, espnMoved, corruptedInDisplay }
       })
     }
   } catch (error) {
