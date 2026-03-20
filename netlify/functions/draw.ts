@@ -359,26 +359,6 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       }
     }
 
-    // First, remove corrupted matches where both players have the same last name
-    // (This happens when api-tennis data has errors like "Linette vs Linette")
-    let removedCorrupted = 0
-    for (const round of Object.keys(drawByRound)) {
-      const before = drawByRound[round].length
-      drawByRound[round] = drawByRound[round].filter(m => {
-        const ln1 = getLastName(m.player_1_name)
-        const ln2 = getLastName(m.player_2_name)
-        if (ln1 && ln2 && ln1 === ln2) {
-          console.log(`Removing corrupted match: ${m.player_1_name} vs ${m.player_2_name} in ${round}`)
-          return false
-        }
-        return true
-      })
-      removedCorrupted += before - drawByRound[round].length
-    }
-    if (removedCorrupted > 0) {
-      console.log(`Removed ${removedCorrupted} corrupted matches with same-player last names`)
-    }
-
     // Use ESPN to correct round assignments and add missing matches
     // ESPN has accurate round info; api-tennis sometimes has matches in wrong rounds
     let espnAdded = 0
@@ -908,28 +888,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       rounds
     }
 
-    // Debug: find corrupted matches in final display
-    const corruptedInDisplay: any[] = []
-    for (const round of draw.rounds) {
-      for (const m of round.matches) {
-        if (m.player1 && m.player2 && m.player1 !== 'TBD' && m.player2 !== 'TBD' && m.player1 !== 'Bye' && m.player2 !== 'Bye') {
-          const ln1 = extractLastName(m.player1)
-          const ln2 = extractLastName(m.player2)
-          if (ln1 === ln2) {
-            corruptedInDisplay.push({ round: round.name, slot: m.slot, p1: m.player1, p2: m.player2 })
-          }
-        }
-      }
-    }
-
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({
-        success: true,
-        ...draw,
-        _debug: { removedCorrupted, espnAdded, espnMoved, corruptedInDisplay }
-      })
+      body: JSON.stringify({ success: true, ...draw })
     }
   } catch (error) {
     console.error('Error fetching draw:', error)
