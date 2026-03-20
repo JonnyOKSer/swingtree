@@ -56,17 +56,17 @@ async function fetchESPNMatches(tournamentName: string, tour: string): Promise<A
           // Only include upcoming/live matches (finished ones should come from api-tennis)
           if (status === 'finished') continue
 
-          // Normalize round name
-          const roundName = comp.status?.type?.description || ''
+          // Normalize round name from comp.round.displayName (e.g., "Round 2", "Quarterfinals")
+          const roundName = comp.round?.displayName || ''
           let round = 'R32' // default
           const roundLower = roundName.toLowerCase()
-          if (roundLower.includes('final') && !roundLower.includes('semi') && !roundLower.includes('quarter')) round = 'F'
+          if (roundLower === 'final' || roundLower === 'finals') round = 'F'
           else if (roundLower.includes('semi')) round = 'SF'
           else if (roundLower.includes('quarter')) round = 'QF'
-          else if (roundLower.includes('round of 16') || roundLower.includes('4th round')) round = 'R16'
-          else if (roundLower.includes('round of 32') || roundLower.includes('3rd round')) round = 'R32'
-          else if (roundLower.includes('round of 64') || roundLower.includes('2nd round')) round = 'R64'
-          else if (roundLower.includes('round of 128') || roundLower.includes('1st round')) round = 'R128'
+          else if (roundLower === 'round 4' || roundLower === '4th round') round = 'R16'
+          else if (roundLower === 'round 3' || roundLower === '3rd round') round = 'R32'
+          else if (roundLower === 'round 2' || roundLower === '2nd round') round = 'R64'
+          else if (roundLower === 'round 1' || roundLower === '1st round') round = 'R128'
 
           matches.push({ round, player1: p1, player2: p2, status })
         }
