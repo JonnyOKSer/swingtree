@@ -29,10 +29,25 @@ interface AsheTickerProps {
   className?: string
 }
 
+// Extract last name for fuzzy matching (handles "S. Tsitsipas" vs "Stefanos Tsitsipas")
+function extractLastName(name: string): string {
+  if (!name) return ''
+  const parts = name.toLowerCase().trim().split(' ')
+  return parts[parts.length - 1] || ''
+}
+
 function TickerItem({ match, showTournament }: { match: MatchResult; showTournament: boolean }) {
-  const loserName = match.winnerName === match.player1Name
+  // Use last-name matching to handle name format differences
+  // e.g., "Stefanos Tsitsipas" vs "S. Tsitsipas"
+  const winnerLast = extractLastName(match.winnerName || '')
+  const player1Last = extractLastName(match.player1Name)
+  const player2Last = extractLastName(match.player2Name)
+
+  const loserName = winnerLast === player1Last
     ? match.player2Name
-    : match.player1Name
+    : winnerLast === player2Last
+      ? match.player1Name
+      : (match.winnerName === match.player1Name ? match.player2Name : match.player1Name)
 
   return (
     <div className="ticker-item">

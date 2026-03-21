@@ -687,6 +687,8 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
             // Determine which player was predicted to win using last-name matching
             let predictedWinnerDisplay = prediction?.predicted_winner
+            // TRUST the database 'correct' value from reconciliation if available
+            // Only recalculate if database value is null (not yet reconciled)
             let predictionCorrect = prediction?.correct
             if (prediction) {
               const predWinnerLast = extractLastName(prediction.predicted_winner)
@@ -697,9 +699,11 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
               } else if (predWinnerLast === player2Last) {
                 predictedWinnerDisplay = player2
               }
-              // Recalculate correct based on actual winner
-              const winnerLast = extractLastName(drawMatch.winner_name)
-              predictionCorrect = predWinnerLast === winnerLast
+              // Only recalculate if database value is null (fallback for unreconciled matches)
+              if (predictionCorrect === null || predictionCorrect === undefined) {
+                const winnerLast = extractLastName(drawMatch.winner_name)
+                predictionCorrect = predWinnerLast === winnerLast
+              }
             }
 
             matches.push({
