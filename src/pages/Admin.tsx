@@ -190,6 +190,28 @@ export default function Admin() {
   const [modelDays, setModelDays] = useState(30)
   const [modelTour, setModelTour] = useState<string>('')
 
+  // Draw sync status
+  const [drawSyncStatus, setDrawSyncStatus] = useState<{
+    recent_syncs: Array<{
+      id: number
+      synced_at: string
+      source: string
+      matches_synced: number
+      success: boolean
+      errors: string[] | null
+    }>
+    last_successful: string | null
+    draw_matches_count: number
+    active_tournaments: number
+    status: 'healthy' | 'stale' | 'error'
+  } | null>(null)
+  const [syncingDraw, setSyncingDraw] = useState(false)
+  const [drawSyncResult, setDrawSyncResult] = useState<{
+    success: boolean
+    message: string
+    matches_synced?: number
+  } | null>(null)
+
   // Cron status
   const [cronStatus, setCronStatus] = useState<{
     today: string
@@ -218,6 +240,7 @@ export default function Admin() {
       fetchUsers()
       checkSystemHealth()
       fetchAccuracyStats()
+      fetchDrawSyncStatus()
     }
   }, [user])
 
@@ -255,8 +278,66 @@ export default function Admin() {
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    await Promise.all([fetchUsers(), checkSystemHealth(), fetchAccuracyStats()])
+    await Promise.all([fetchUsers(), checkSystemHealth(), fetchAccuracyStats(), fetchDrawSyncStatus()])
     setRefreshing(false)
+  }
+
+  const fetchDrawSyncStatus = async () => {
+    try {
+      const response = await fetch('/api/admin-draw-sync', { credentials: 'include' })
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setDrawSyncStatus({
+            recent_syncs: data.recent_syncs || [],
+            last_successful: data.last_successful,
+            draw_matches_count: data.draw_matches_count,
+            active_tournaments: data.active_tournaments,
+            status: data.status
+          })
+        }
+      }
+    } catch {
+      console.error('Failed to fetch draw sync status')
+    }
+  }
+
+  const handleTriggerDrawSync = async () => {
+    if (!confirm('This will manually sync draw_matches from ESPN. Continue?')) return
+
+    setSyncingDraw(true)
+    setDrawSyncResult(null)
+
+    try {
+      const response = await fetch('/api/admin-draw-sync', {
+        method: 'POST',
+        credentials: 'include'
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setDrawSyncResult({
+          success: data.success,
+          message: data.message || 'Sync complete',
+          matches_synced: data.matches_synced
+        })
+        // Refresh status
+        fetchDrawSyncStatus()
+      } else {
+        setDrawSyncResult({
+          success: false,
+          message: data.error || 'Sync failed'
+        })
+      }
+    } catch {
+      setDrawSyncResult({
+        success: false,
+        message: 'Network error'
+      })
+    } finally {
+      setSyncingDraw(false)
+    }
   }
 
   const fetchAccuracyStats = async () => {
@@ -1109,6 +1190,98 @@ export default function Admin() {
               <p className="no-insights">No significant patterns found. Need more reconciled predictions.</p>
             )}
           </div>
+        )}
+      </section>
+
+      {/* Draw Sync Status */}
+      <section className="admin-section draw-sync-section">
+        <div className="draw-sync-header">
+          <h2>Draw Sync (ESPN)</h2>
+          <div className="draw-sync-actions">
+            <button
+              className="refresh-btn small"
+              onClick={fetchDrawSyncStatus}
+              title="Refresh status"
+            >
+              ⟳
+            </button>
+            <button
+              className="trigger-btn small"
+              onClick={handleTriggerDrawSync}
+              disabled={syncingDraw}
+            >
+              {syncingDraw ? 'Syncing...' : 'Sync Now'}
+            </button>
+          </div>
+        </div>
+
+        {drawSyncResult && (
+          <div className={`trigger-result ${drawSyncResult.success ? 'success' : 'error'}`}>
+            <p>{drawSyncResult.message}</p>
+            {drawSyncResult.matches_synced !== undefined && (
+              <p className="sync-count">Matches synced: {drawSyncResult.matches_synced}</p>
+            )}
+          </div>
+        )}
+
+        {drawSyncStatus ? (
+          <div className="draw-sync-content">
+            <div className="draw-sync-summary">
+              <div className={`draw-sync-status-badge ${drawSyncStatus.status}`}>
+                {drawSyncStatus.status === 'healthy' ? '✓ Healthy' :
+                 drawSyncStatus.status === 'stale' ? '⚠ Stale' : '✗ Error'}
+              </div>
+              <div className="draw-sync-stats">
+                <span>Draw Matches: <strong>{drawSyncStatus.draw_matches_count}</strong></span>
+                <span>Active Tournaments: <strong>{drawSyncStatus.active_tournaments}</strong></span>
+                {drawSyncStatus.last_successful && (
+                  <span>Last Sync: <strong>{new Date(drawSyncStatus.last_successful).toLocaleString()}</strong></span>
+                )}
+              </div>
+            </div>
+
+            {drawSyncStatus.recent_syncs && drawSyncStatus.recent_syncs.length > 0 && (
+              <div className="draw-sync-recent">
+                <h4>Recent Syncs</h4>
+                <table className="draw-sync-table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Source</th>
+                      <th>Matches</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {drawSyncStatus.recent_syncs.slice(0, 5).map((sync) => (
+                      <tr key={sync.id} className={sync.success ? 'success' : 'failed'}>
+                        <td>{new Date(sync.synced_at).toLocaleString()}</td>
+                        <td>{sync.source}</td>
+                        <td>{sync.matches_synced}</td>
+                        <td>
+                          {sync.success ? '✓' : '✗'}
+                          {sync.errors && sync.errors.length > 0 && (
+                            <span className="sync-error-count" title={sync.errors.join(', ')}>
+                              ({sync.errors.length} errors)
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {drawSyncStatus.status === 'error' && drawSyncStatus.active_tournaments > 0 && (
+              <div className="draw-sync-alert">
+                ⚠️ Draw matches empty but {drawSyncStatus.active_tournaments} tournament(s) active.
+                Drawsheet will show empty until sync succeeds.
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="draw-sync-loading">Loading draw sync status...</p>
         )}
       </section>
 
