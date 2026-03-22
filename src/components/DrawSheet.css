@@ -397,15 +397,12 @@
   border-color: #333333;
 }
 
-/* Bye slot (seeded player advances) */
+/* Bye slot (seeded player advances) - maintains same dimensions as all cards */
 .match-card.match-bye {
   border: 1px dashed #444444;
   opacity: 0.5;
   cursor: default;
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* Inherits fixed height from .match-card (100px) for uniformity */
 }
 
 /* Voided match (withdrawal, walkover) */
@@ -487,6 +484,8 @@
   gap: 6px;
   margin-bottom: 4px;
   min-height: 16px;
+  max-height: 16px;
+  overflow: hidden;
 }
 
 .tier-badge {
@@ -495,6 +494,9 @@
   padding: 2px 4px;
   border-radius: 2px;
   letter-spacing: 0.5px;
+  min-width: 42px; /* Consistent width for all tiers (STRONG, CONFIDENT, PICK, LEAN, SKIP) */
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .tier-badge.tier-strong {
@@ -527,6 +529,9 @@
   font-weight: 600;
   padding: 1px 5px;
   border-radius: 2px;
+  flex-shrink: 0;
+  min-width: 18px;
+  text-align: center;
 }
 
 .result-badge.correct {
@@ -544,6 +549,9 @@
   font-size: 11px;
   color: #fbbf24;
   cursor: help;
+  flex-shrink: 0;
+  min-width: 14px;
+  text-align: center;
 }
 
 .divergence-flag::after {
@@ -579,6 +587,8 @@
   padding: 2px 0;
   font-size: 12px;
   color: #FFFFFF;
+  overflow: hidden; /* Prevent content from bleeding outside card */
+  max-width: 100%;
 }
 
 .player-row.winner {
@@ -604,6 +614,7 @@
 
 .player-name {
   flex: 1;
+  min-width: 0; /* Critical for flex item text truncation */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -623,6 +634,8 @@
   background: rgba(196, 151, 59, 0.2);
   color: var(--serengeti-gold, #c4973b);
   font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* Match score */
@@ -756,9 +769,35 @@
     max-height: none;
   }
 
+  .draw-header {
+    padding: 12px 16px;
+  }
+
+  .draw-title h2 {
+    font-size: 16px;
+  }
+
+  .draw-legend {
+    padding: 8px 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .draw-legend .legend-item {
+    font-size: 9px;
+  }
+
   .round-column {
     width: 170px;
     min-width: 170px;
+  }
+
+  /* Parlay button - constrain to match card width on mobile */
+  .parlay-btn {
+    width: 160px;
+    max-width: 160px;
+    font-size: 9px;
+    padding: 5px 10px;
   }
 
   .match-card {
@@ -771,5 +810,59 @@
 
   .player-row {
     font-size: 11px;
+    gap: 4px;
+  }
+
+  .player-seed {
+    font-size: 8px;
+    min-width: 12px;
+  }
+
+  .player-country {
+    font-size: 8px;
+  }
+
+  .confidence-badge {
+    font-size: 8px;
+    padding: 1px 3px;
+  }
+
+  .tier-badge {
+    font-size: 7px;
+    padding: 1px 3px;
+  }
+
+  .first-set-line {
+    font-size: 8px;
+    gap: 6px;
+  }
+}
+
+/* Extra small screens (iPhone SE, 320px) */
+@media (max-width: 375px) {
+  .round-column {
+    width: 150px;
+    min-width: 150px;
+  }
+
+  .parlay-btn {
+    width: 140px;
+    max-width: 140px;
+  }
+
+  .match-card {
+    width: 140px;
+    height: 90px;
+    min-height: 90px;
+    max-height: 90px;
+    padding: 5px 6px;
+  }
+
+  .player-row {
+    font-size: 10px;
+  }
+
+  .draw-title h2 {
+    font-size: 14px;
   }
 }
