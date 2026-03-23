@@ -58,6 +58,12 @@ async function fetchESPNMatches(tournamentName: string, tour: string): Promise<A
           const roundName = comp.round?.displayName || ''
           let round = 'R32' // default
           const roundLower = roundName.toLowerCase()
+
+          // Skip qualifying rounds - they shouldn't appear in main draw
+          if (roundLower.includes('qualifying') || roundLower.includes('qual')) {
+            continue // Skip this match
+          }
+
           if (roundLower === 'final' || roundLower === 'finals') round = 'F'
           else if (roundLower.includes('semi')) round = 'SF'
           else if (roundLower.includes('quarter')) round = 'QF'
@@ -292,6 +298,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     const slugWords = tournamentSlug.replace(/-/g, ' ').toLowerCase().split(' ')
     const primaryWord = slugWords[0] // First word is usually the city/tournament name
     // Filter to matches from the last 14 days to avoid historical data pollution
+    // Exclude qualifying rounds (Q) - they shouldn't appear in main draw
     const drawMatchesResult = await pool.query(`
       SELECT
         match_key,
@@ -309,6 +316,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       WHERE LOWER(tournament_name) LIKE $1
         AND UPPER(tour) = $2
         AND scheduled_date >= CURRENT_DATE - INTERVAL '14 days'
+        AND round_normalized != 'Q'
       ORDER BY scheduled_date ASC, match_key ASC
     `, [`%${primaryWord}%`, tour])
 
