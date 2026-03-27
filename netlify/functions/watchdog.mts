@@ -18,7 +18,7 @@ import type { Config, Context } from "@netlify/functions";
 import { getPool } from "./db";
 
 // Configuration
-const TENNIS_ORACLE_URL = process.env.TENNIS_ORACLE_URL || "https://tennis-oracle-production.up.railway.app";
+const TENNIS_ORACLE_URL = process.env.TENNIS_ORACLE_URL || "https://agent-production-765b.up.railway.app";
 const TENNIS_ORACLE_API_KEY = process.env.TENNIS_ORACLE_API_KEY || "";
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_ADMIN_WEBHOOK_URL || "";
 
