@@ -465,19 +465,19 @@ export default function DrawSheet({
         <div className="draw-legend">
           <div className="legend-item">
             <span className="legend-box tier-strong" />
-            <span>STRONG (90%+)</span>
+            <span>STRONG (75%+)</span>
           </div>
           <div className="legend-item">
             <span className="legend-box tier-confident" />
-            <span>CONFIDENT (80-89%)</span>
+            <span>CONFIDENT (70-74%)</span>
           </div>
           <div className="legend-item">
             <span className="legend-box tier-pick" />
-            <span>PICK (70-79%)</span>
+            <span>PICK (65-69%)</span>
           </div>
           <div className="legend-item">
             <span className="legend-box tier-lean" />
-            <span>LEAN (60-69%)</span>
+            <span>LEAN (60-64%)</span>
           </div>
           <div className="legend-item">
             <span className="legend-box tier-skip" />
