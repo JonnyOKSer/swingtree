@@ -191,7 +191,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           country: metadata?.country || 'Unknown',
           countryCode: metadata?.countryCode || 'UNK',
           city: metadata?.city || displayName,
-          surface: 'Hard',
+          surface: metadata?.surface || 'Hard',
           category,
           tour,
           status,

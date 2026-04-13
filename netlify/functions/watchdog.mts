@@ -176,11 +176,93 @@ async function checkPredictionStatus(): Promise<CheckResult> {
   }
 }
 
+async function checkCronHealth(): Promise<CheckResult> {
+  // Check if crons are actually running by looking at cron status
+  try {
+    const response = await fetch(`${TENNIS_ORACLE_URL}/cron/status`, {
+      signal: AbortSignal.timeout(HEALTH_CHECK_TIMEOUT)
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const lastRuns = data.last_successful_runs || {};
+      const unreconciled = data.unreconciled_3d || 0;
+
+      // Check if any cron has run in the last 6 hours
+      let mostRecentRun: Date | null = null;
+      for (const [, lastRun] of Object.entries(lastRuns)) {
+        if (lastRun) {
+          const runDate = new Date(lastRun as string);
+          if (!mostRecentRun || runDate > mostRecentRun) {
+            mostRecentRun = runDate;
+          }
+        }
+      }
+
+      if (mostRecentRun) {
+        const hoursSince = (Date.now() - mostRecentRun.getTime()) / (1000 * 60 * 60);
+
+        // If crons haven't run in 24+ hours, that's a problem
+        if (hoursSince > 24) {
+          return {
+            healthy: false,
+            message: `Crons stale: ${hoursSince.toFixed(0)}h since last run`,
+            details: { hoursSince, unreconciled, lastRuns }
+          };
+        }
+
+        // If >50 unreconciled predictions in 3 days, reconciliation isn't running
+        if (unreconciled > 50) {
+          return {
+            healthy: false,
+            message: `Reconciliation backlog: ${unreconciled} unreconciled`,
+            details: { hoursSince, unreconciled, lastRuns }
+          };
+        }
+
+        return {
+          healthy: true,
+          message: `Crons OK (${hoursSince.toFixed(1)}h ago, ${unreconciled} unreconciled)`,
+          details: { hoursSince, unreconciled }
+        };
+      }
+
+      return { healthy: false, message: "No cron history found", details: data };
+    }
+    return { healthy: false, message: `Cron status check failed: HTTP ${response.status}` };
+  } catch (error) {
+    return { healthy: false, message: `Cron check error: ${error}` };
+  }
+}
+
 async function triggerRecovery(): Promise<CheckResult> {
   if (!TENNIS_ORACLE_API_KEY) {
     return { healthy: false, message: "No API key configured - cannot trigger recovery" };
   }
 
+  const results: string[] = [];
+  let overallSuccess = true;
+
+  // 1. Trigger draw sync first (so predictions have data to work with)
+  console.log("  [1/3] Triggering draw sync...");
+  try {
+    const syncResponse = await fetch(`${TENNIS_ORACLE_URL}/sync-draws`, {
+      method: "POST",
+      headers: { "X-API-Key": TENNIS_ORACLE_API_KEY },
+      signal: AbortSignal.timeout(120000) // 2 min timeout for sync
+    });
+    if (syncResponse.ok) {
+      results.push("draw-sync: success");
+    } else {
+      results.push(`draw-sync: HTTP ${syncResponse.status}`);
+      // Don't fail overall - continue to predictions
+    }
+  } catch (error) {
+    results.push(`draw-sync: ${error}`);
+  }
+
+  // 2. Trigger predictions
+  console.log("  [2/3] Triggering predictions...");
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TRIGGER_TIMEOUT);
 
@@ -196,21 +278,51 @@ async function triggerRecovery(): Promise<CheckResult> {
     if (response.ok) {
       const data = await response.json();
       if (data.success) {
-        return { healthy: true, message: "Recovery triggered successfully", details: data };
+        results.push("predictions: success");
+      } else {
+        results.push(`predictions: ${JSON.stringify(data)}`);
+        overallSuccess = false;
       }
-      return { healthy: false, message: `Trigger returned error: ${JSON.stringify(data)}`, details: data };
+    } else if (response.status === 403) {
+      results.push("predictions: in progress (locked)");
+    } else {
+      results.push(`predictions: HTTP ${response.status}`);
+      overallSuccess = false;
     }
-    if (response.status === 403) {
-      return { healthy: false, message: "Trigger in progress (locked)" };
-    }
-    return { healthy: false, message: `Trigger failed: HTTP ${response.status}` };
   } catch (error) {
     clearTimeout(timeout);
     if (error instanceof Error && error.name === "AbortError") {
-      return { healthy: false, message: "Trigger timeout - pipeline may still be running" };
+      results.push("predictions: timeout");
+    } else {
+      results.push(`predictions: ${error}`);
     }
-    return { healthy: false, message: `Trigger error: ${error}` };
+    overallSuccess = false;
   }
+
+  // 3. Trigger reconciliation
+  console.log("  [3/3] Triggering reconciliation...");
+  try {
+    const reconcileResponse = await fetch(`${TENNIS_ORACLE_URL}/reconcile`, {
+      method: "POST",
+      headers: { "X-API-Key": TENNIS_ORACLE_API_KEY },
+      signal: AbortSignal.timeout(120000) // 2 min timeout
+    });
+    if (reconcileResponse.ok) {
+      results.push("reconcile: success");
+    } else {
+      results.push(`reconcile: HTTP ${reconcileResponse.status}`);
+      // Don't fail overall for reconciliation failure
+    }
+  } catch (error) {
+    results.push(`reconcile: ${error}`);
+  }
+
+  const message = results.join(", ");
+  return {
+    healthy: overallSuccess,
+    message: overallSuccess ? `Recovery completed: ${message}` : `Recovery partial: ${message}`,
+    details: { steps: results }
+  };
 }
 
 async function sendDiscordAlert(
@@ -294,13 +406,20 @@ export default async function handler(request: Request, context: Context) {
   }
 
   // Step 2: Check prediction status
-  console.log("\n[2/3] Checking prediction status...");
+  console.log("\n[2/4] Checking prediction status...");
   const predResult = await checkPredictionStatus();
   results.checks = { ...results.checks as object, predictions: predResult };
   console.log(`  ${predResult.healthy ? "✓" : "✗"} ${predResult.message}`);
 
-  // Step 3: Determine if recovery is needed
-  const needsRecovery = !predResult.healthy;
+  // Step 3: Check cron health (are crons actually running?)
+  console.log("\n[3/4] Checking cron health...");
+  const cronResult = await checkCronHealth();
+  results.checks = { ...results.checks as object, cron_health: cronResult };
+  console.log(`  ${cronResult.healthy ? "✓" : "✗"} ${cronResult.message}`);
+
+  // Step 4: Determine if recovery is needed
+  // Trigger recovery if predictions are missing OR crons are stale
+  const needsRecovery = !predResult.healthy || !cronResult.healthy;
 
   if (needsRecovery) {
     results.overall_healthy = false;
