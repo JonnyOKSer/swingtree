@@ -75,11 +75,15 @@ export const TOURNAMENT_METADATA: Record<string, {
   // Clay Court Events (ATP 250)
   'Houston': { country: 'United States of America', countryCode: 'USA', city: 'Houston', category: 'ATP 250', tour: 'ATP', surface: 'Clay' },
   'U.S. Clay Court Championship': { country: 'United States of America', countryCode: 'USA', city: 'Houston', category: 'ATP 250', tour: 'ATP', surface: 'Clay' },
+  'Fayez Sarofim & Co. U.S. Men\'s Clay Court Championship': { country: 'United States of America', countryCode: 'USA', city: 'Houston', category: 'ATP 250', tour: 'ATP', surface: 'Clay' },
   'Marrakech': { country: 'Morocco', countryCode: 'MAR', city: 'Marrakech', category: 'ATP 250', tour: 'ATP', surface: 'Clay' },
   'Grand Prix Hassan II': { country: 'Morocco', countryCode: 'MAR', city: 'Marrakech', category: 'ATP 250', tour: 'ATP', surface: 'Clay' },
   'Bucharest': { country: 'Romania', countryCode: 'ROU', city: 'Bucharest', category: 'ATP 250', tour: 'ATP', surface: 'Clay' },
+  'Tiriac Open': { country: 'Romania', countryCode: 'ROU', city: 'Bucharest', category: 'ATP 250', tour: 'ATP', surface: 'Clay' },
+  'Tiriac Open presented by UniCredit Bank': { country: 'Romania', countryCode: 'ROU', city: 'Bucharest', category: 'ATP 250', tour: 'ATP', surface: 'Clay' },
   'Munich': { country: 'Germany', countryCode: 'DEU', city: 'Munich', category: 'ATP 250', tour: 'ATP', surface: 'Clay' },
   'BMW Open': { country: 'Germany', countryCode: 'DEU', city: 'Munich', category: 'ATP 250', tour: 'ATP', surface: 'Clay' },
+  'BMW Open by Bitpanda': { country: 'Germany', countryCode: 'DEU', city: 'Munich', category: 'ATP 250', tour: 'ATP', surface: 'Clay' },
   'Estoril': { country: 'Portugal', countryCode: 'PRT', city: 'Estoril', category: 'ATP 250', tour: 'ATP', surface: 'Clay' },
   'Lyon': { country: 'France', countryCode: 'FRA', city: 'Lyon', category: 'ATP 250', tour: 'ATP', surface: 'Clay' },
   'Geneva': { country: 'Switzerland', countryCode: 'CHE', city: 'Geneva', category: 'ATP 250', tour: 'ATP', surface: 'Clay' },
@@ -88,11 +92,14 @@ export const TOURNAMENT_METADATA: Record<string, {
   'Kitzbuhel': { country: 'Austria', countryCode: 'AUT', city: 'Kitzbuhel', category: 'ATP 250', tour: 'ATP', surface: 'Clay' },
   'Umag': { country: 'Croatia', countryCode: 'HRV', city: 'Umag', category: 'ATP 250', tour: 'ATP', surface: 'Clay' },
 
-  // WTA Premier/1000 Events
+  // WTA Clay Events
   'Stuttgart': { country: 'Germany', countryCode: 'DEU', city: 'Stuttgart', category: 'WTA 500', tour: 'WTA', surface: 'Clay' },
   'Porsche Tennis Grand Prix': { country: 'Germany', countryCode: 'DEU', city: 'Stuttgart', category: 'WTA 500', tour: 'WTA', surface: 'Clay' },
   'Charleston': { country: 'United States of America', countryCode: 'USA', city: 'Charleston', category: 'WTA 500', tour: 'WTA', surface: 'Clay' },
   'Bogota': { country: 'Colombia', countryCode: 'COL', city: 'Bogota', category: 'WTA 250', tour: 'WTA', surface: 'Clay' },
+  'Grand Prix Open Villa de Madrid by Silverway': { country: 'Spain', countryCode: 'ESP', city: 'Madrid', category: 'WTA 125', tour: 'WTA', surface: 'Clay' },
+  'Oeiras': { country: 'Portugal', countryCode: 'PRT', city: 'Oeiras', category: 'WTA 125', tour: 'WTA', surface: 'Clay' },
+  'Oeiras Jamor Ladies': { country: 'Portugal', countryCode: 'PRT', city: 'Oeiras', category: 'WTA 125', tour: 'WTA', surface: 'Clay' },
 
   // ATP Finals
   'ATP Finals': { country: 'Italy', countryCode: 'ITA', city: 'Turin', category: 'ATP Finals', tour: 'ATP', surface: 'Hard' },
