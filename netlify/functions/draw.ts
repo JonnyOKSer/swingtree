@@ -569,10 +569,16 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         return firstPart
       }
 
-      // If last part is short (1-2 chars like "Wu"), it's likely a Chinese surname - use it
+      // If last part is a known Chinese surname (2-3 chars), use it
       const lastPart = parts[parts.length - 1]
-      if (lastPart && lastPart.length <= 3 && parts.length > 1) {
+      if (lastPart && lastPart.length >= 2 && lastPart.length <= 3 && CHINESE_SURNAMES.has(lastPart)) {
         return lastPart
+      }
+
+      // Single letter at the end is an abbreviation (e.g., "Machac T.") - use preceding part
+      if (lastPart && lastPart.length === 1 && parts.length > 1) {
+        // Find the last substantial part (>2 chars)
+        return parts.filter(p => p.length > 2).pop() || parts[parts.length - 2] || lastPart
       }
 
       // Otherwise get the last substantial part (>2 chars)
