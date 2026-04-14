@@ -640,10 +640,52 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       }
     }
 
+    // ESPN normalizes "Round 1" to R128, "Round 2" to R64 regardless of actual draw size
+    // We need to map the ESPN round names to the correct round for this draw size
+    // Example: For 48-draw, ESPN's "R128" (Round 1) is actually our R32
+    const getESPNRoundMapping = (targetRound: string, roundIndex: number): string[] => {
+      // ESPN uses absolute round names, but "Round 1" always means the first round
+      // Map based on round index (position in tournament)
+      const espnFirstRounds = ['R128', 'R64', 'R32']  // ESPN names for "Round 1"
+      const espnSecondRounds = ['R64', 'R32', 'R16']  // ESPN names for "Round 2"
+
+      // For named rounds (QF, SF, F), ESPN uses same names
+      if (['QF', 'SF', 'F'].includes(targetRound)) {
+        return [targetRound]
+      }
+
+      // For Round 4 (R16), ESPN might call it R16 or use different naming
+      if (targetRound === 'R16') {
+        return ['R16', 'R32']  // Check both in case of mapping issues
+      }
+
+      // For first round of any draw size, check all ESPN first-round names
+      if (roundIndex === 0) {
+        return [targetRound, ...espnFirstRounds]
+      }
+
+      // For second round, check ESPN second-round names
+      if (roundIndex === 1) {
+        return [targetRound, ...espnSecondRounds]
+      }
+
+      return [targetRound]
+    }
+
     for (let roundIndex = 0; roundIndex < config.rounds.length; roundIndex++) {
       const roundName = config.rounds[roundIndex]
       const matchCount = config.matchCounts[roundName]
-      const drawMatches = drawByRound[roundName] || []
+
+      // Get matches from ESPN round mapping (handles R128 → R32 for smaller draws)
+      const espnRounds = getESPNRoundMapping(roundName, roundIndex)
+      let drawMatches: any[] = []
+      for (const espnRound of espnRounds) {
+        if (drawByRound[espnRound] && drawByRound[espnRound].length > 0) {
+          drawMatches = drawByRound[espnRound]
+          break  // Use first match found
+        }
+      }
+
       const roundPredictions = predictionsByRound[roundName] || []
       const matches: MatchSlot[] = []
 
