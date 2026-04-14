@@ -654,9 +654,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         return [targetRound]
       }
 
-      // For Round 4 (R16), ESPN might call it R16 or use different naming
+      // For R16 (Round 4 in Grand Slams, Round 2 in ATP 500s)
+      // ESPN might store it as R64 (their "Round 2") or R32
       if (targetRound === 'R16') {
-        return ['R16', 'R32']  // Check both in case of mapping issues
+        return ['R16', 'R64', 'R32']  // Check all possible ESPN mappings
       }
 
       // For first round of any draw size, check all ESPN first-round names
