@@ -1,5 +1,5 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
-import { getPool } from './db'
+import { getPool, TOURNAMENT_METADATA } from './db'
 
 // ESPN API endpoints for hybrid draw data
 const ESPN_ATP_URL = 'https://site.api.espn.com/apis/site/v2/sports/tennis/atp/scoreboard'
@@ -933,13 +933,22 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       category = category.replace('ATP', 'WTA')
     }
 
+    // Look up surface from TOURNAMENT_METADATA as fallback
+    const tournamentName = tournamentInfo?.name || searchPattern
+    const metadataKey = Object.keys(TOURNAMENT_METADATA).find(
+      k => k.toLowerCase() === tournamentName.toLowerCase() ||
+           tournamentName.toLowerCase().includes(k.toLowerCase())
+    )
+    const metadata = metadataKey ? TOURNAMENT_METADATA[metadataKey] : null
+    const surface = tournamentInfo?.surface || metadata?.surface || 'Hard'
+
     const draw: TournamentDraw = {
       tournament: {
         id: tournamentInfo?.tournament_id,
         slug: tournamentInfo?.slug || tournamentSlug,
         name: tournamentInfo?.name || searchPattern,
         category,
-        surface: tournamentInfo?.surface || 'Hard',
+        surface,
         city: tournamentInfo?.city || '',
         country: tournamentInfo?.country || '',
         current_round: config.display[currentRound] || currentRound,
