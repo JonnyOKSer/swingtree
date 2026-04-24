@@ -10,6 +10,7 @@ export interface User {
   status: 'trial' | 'active' | 'expired' | 'cancelled' | 'comp' | 'past_due'
   trialEnd: string | null
   isAdmin: boolean
+  alertsEnabled: boolean
 }
 
 // Feature access based on tier
@@ -36,6 +37,7 @@ export interface AuthContextType {
   tierAccess: TierAccess
   logout: () => Promise<void>
   checkSession: () => Promise<void>
+  toggleAlerts: () => Promise<boolean>
 }
 
 // Default tier access (trial gets full access during trial period)
@@ -140,6 +142,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+  const toggleAlerts = async (): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/toggle-alerts', {
+        method: 'POST',
+        credentials: 'include'
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        // Update local user state
+        if (user) {
+          setUser({ ...user, alertsEnabled: data.alertsEnabled })
+        }
+        return data.alertsEnabled
+      }
+      return user?.alertsEnabled ?? false
+    } catch (error) {
+      console.error('Toggle alerts error:', error)
+      return user?.alertsEnabled ?? false
+    }
+  }
+
   // Check if trial has expired
   const isTrialExpired = (() => {
     if (!user) return false
@@ -172,7 +196,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isCompUser,
     tierAccess,
     logout,
-    checkSession
+    checkSession,
+    toggleAlerts
   }
 
   return (

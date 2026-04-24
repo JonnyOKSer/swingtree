@@ -16,7 +16,7 @@ const TIER_NAMES: Record<string, string> = {
 export default function MainMenu() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { isAuthenticated, loading, logout, user, checkSession } = useAuth()
+  const { isAuthenticated, loading, logout, user, checkSession, toggleAlerts } = useAuth()
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'info' | 'warning'; message: string } | null>(null)
   const [processingSubscription, setProcessingSubscription] = useState(false)
@@ -192,6 +192,16 @@ export default function MainMenu() {
             <p className="user-tier">
               {isCompUser ? 'Complimentary' : TIER_NAMES[user.tier] || user.tier}
             </p>
+          )}
+          {(hasActiveSubscription || isCompUser || user.tier === 'trial') && (
+            <label className="alerts-toggle">
+              <input
+                type="checkbox"
+                checked={user.alertsEnabled}
+                onChange={() => toggleAlerts()}
+              />
+              <span className="toggle-label">Value Alerts</span>
+            </label>
           )}
         </div>
       )}

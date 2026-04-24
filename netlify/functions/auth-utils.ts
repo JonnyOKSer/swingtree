@@ -23,6 +23,7 @@ export interface SessionUser {
   status: 'trial' | 'active' | 'expired' | 'cancelled' | 'comp' | 'past_due'
   trialEnd: string | null
   isAdmin: boolean
+  alertsEnabled: boolean
 }
 
 const JWT_EXPIRY = '24h'

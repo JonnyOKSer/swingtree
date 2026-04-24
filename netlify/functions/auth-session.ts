@@ -42,7 +42,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       SELECT
         id, email, name, avatar_url,
         subscription_tier, subscription_status, trial_end,
-        is_admin, comp_tier
+        is_admin, comp_tier, COALESCE(alerts_enabled, false) as alerts_enabled
       FROM users
       WHERE id = $1
     `, [session.userId])
@@ -71,7 +71,8 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       tier: dbUser.subscription_tier,
       status: effectiveStatus,
       trialEnd: dbUser.trial_end?.toISOString() || null,
-      isAdmin: dbUser.is_admin
+      isAdmin: dbUser.is_admin,
+      alertsEnabled: dbUser.alerts_enabled
     }
 
     return {
