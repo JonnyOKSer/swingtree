@@ -734,7 +734,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           const player1 = drawMatch.player_1_name
           const player2 = drawMatch.player_2_name
 
-          if (drawMatch.status === 'finished' && drawMatch.winner_name) {
+          if ((drawMatch.status === 'finished' || drawMatch.status === 'completed') && drawMatch.winner_name) {
             // Completed match from draw
             // Use last-name matching to determine loser (handles name format variations like "D. Yastremska" vs "Dayana Yastremska")
             const winnerLast = extractLastName(drawMatch.winner_name)
