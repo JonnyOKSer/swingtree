@@ -7,6 +7,42 @@
   background: #1e2028;
 }
 
+/* ============================================
+   View Toggle Button
+   ============================================ */
+.view-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 200;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 32, 40, 0.95);
+  border: 1px solid rgba(120, 112, 104, 0.3);
+  border-radius: 8px;
+  color: #C8C0B0;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.view-toggle:hover {
+  background: rgba(50, 52, 60, 0.95);
+  border-color: rgba(120, 112, 104, 0.5);
+  color: var(--serengeti-gold);
+}
+
+.view-toggle:active {
+  transform: scale(0.95);
+}
+
+.view-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
 .world-map {
   display: block;
   width: 100%;
@@ -450,5 +486,261 @@
   .tournament-panel .tournament-item {
     padding: 12px 16px;
     margin: 0;
+  }
+}
+
+/* ============================================
+   Tournament List View
+   ============================================ */
+.tournament-list-view {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow-y: auto;
+  padding: 70px 16px 24px;
+  background: #1e2028;
+}
+
+.tour-section {
+  margin-bottom: 16px;
+}
+
+.tour-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: rgba(30, 32, 40, 0.95);
+  border: 1px solid rgba(120, 112, 104, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.tour-header:hover {
+  background: rgba(40, 42, 52, 0.95);
+  border-color: rgba(120, 112, 104, 0.5);
+}
+
+.tour-header.tour-atp {
+  border-left: 3px solid #5ba4d4;
+}
+
+.tour-header.tour-wta {
+  border-left: 3px solid #d45b9a;
+}
+
+.tour-header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tour-badge-large {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.tour-badge-large.tour-atp {
+  background: rgba(59, 130, 196, 0.2);
+  color: #5ba4d4;
+  border: 1px solid rgba(59, 130, 196, 0.3);
+}
+
+.tour-badge-large.tour-wta {
+  background: rgba(196, 59, 130, 0.2);
+  color: #d45b9a;
+  border: 1px solid rgba(196, 59, 130, 0.3);
+}
+
+.tour-count {
+  font-size: 13px;
+  color: #787068;
+  letter-spacing: 0.3px;
+}
+
+.chevron {
+  color: #787068;
+  transition: transform 0.2s ease;
+}
+
+.chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.chevron.small {
+  margin-left: auto;
+}
+
+.tour-content {
+  padding: 8px 0 0 0;
+}
+
+.country-group {
+  margin-bottom: 2px;
+}
+
+.country-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.country-header:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.country-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #C8C0B0;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.country-count {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  background: rgba(120, 112, 104, 0.2);
+  border-radius: 10px;
+  color: #787068;
+}
+
+.country-tournaments {
+  padding: 0 8px 8px 8px;
+}
+
+.tournament-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  margin: 4px 0;
+  background: rgba(37, 37, 48, 0.8);
+  border-radius: 6px;
+  border: 1px solid rgba(120, 112, 104, 0.15);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.tournament-row:hover {
+  background: rgba(50, 50, 60, 0.9);
+  border-color: rgba(120, 112, 104, 0.3);
+}
+
+.tournament-row .tournament-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 0;
+}
+
+.tournament-row .tournament-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--flash-white);
+  letter-spacing: 0.3px;
+}
+
+.tournament-row .tournament-meta {
+  font-size: 12px;
+  color: #787068;
+  letter-spacing: 0.3px;
+}
+
+.tournament-row .tournament-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0;
+}
+
+/* WTA styling in list view */
+.tournament-row.tour-wta .tournament-name {
+  color: #e86ba8;
+}
+
+.tournament-row.tour-wta:hover .tournament-name {
+  color: #f07db8;
+}
+
+.tournament-row .live-indicator.wta,
+.tournament-row.tour-wta .live-indicator {
+  background: #d45b9a;
+}
+
+.tournament-row .round.wta,
+.tournament-row.tour-wta .round {
+  color: #d45b9a;
+}
+
+/* Active tournaments get subtle highlight */
+.tournament-row.active {
+  border-left: 3px solid var(--serengeti-gold);
+}
+
+.tournament-row.active.tour-wta {
+  border-left-color: #d45b9a;
+}
+
+/* Mobile adjustments for list view */
+@media (max-width: 768px) {
+  .tournament-list-view {
+    padding: 60px 12px 90px;
+  }
+
+  .tour-header {
+    padding: 12px 14px;
+  }
+
+  .tour-badge-large {
+    font-size: 12px;
+    padding: 3px 8px;
+  }
+
+  .country-header {
+    padding: 10px 14px;
+  }
+
+  .country-name {
+    font-size: 13px;
+  }
+
+  .tournament-row {
+    padding: 12px 14px;
+  }
+
+  .tournament-row .tournament-name {
+    font-size: 13px;
+  }
+
+  .tournament-row .tournament-meta {
+    font-size: 11px;
+  }
+
+  .view-toggle {
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .view-toggle svg {
+    width: 18px;
+    height: 18px;
   }
 }

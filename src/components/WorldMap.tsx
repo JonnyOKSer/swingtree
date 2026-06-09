@@ -3,6 +3,7 @@ import * as d3 from 'd3'
 import * as topojson from 'topojson-client'
 import type { Topology, GeometryCollection } from 'topojson-specification'
 import './WorldMap.css'
+import TournamentListView from './TournamentListView'
 
 export interface Tournament {
   id: string
@@ -55,6 +56,10 @@ export default function WorldMap({ onTournamentSelect }: WorldMapProps) {
   const [countryTournaments, setCountryTournaments] = useState<Tournament[]>([])
   const [panelPosition, setPanelPosition] = useState({ x: 0, y: 0 })
   const [tournaments, setTournaments] = useState<Tournament[]>(FALLBACK_TOURNAMENTS)
+  const [viewMode, setViewMode] = useState<'map' | 'list'>(() => {
+    const saved = localStorage.getItem('swingtree-view-mode')
+    return (saved === 'list' || saved === 'map') ? saved : 'map'
+  })
 
   // Fetch tournaments from API
   useEffect(() => {
@@ -207,77 +212,115 @@ export default function WorldMap({ onTournamentSelect }: WorldMapProps) {
     }
   }, [selectedCountry])
 
+  // Persist view mode preference
+  useEffect(() => {
+    localStorage.setItem('swingtree-view-mode', viewMode)
+  }, [viewMode])
+
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'map' ? 'list' : 'map')
+    // Close any open panel when switching views
+    setSelectedCountry(null)
+    setCountryTournaments([])
+  }
+
   return (
     <div className="world-map-container" ref={containerRef}>
-      <svg ref={svgRef} className="world-map" />
+      {/* View Toggle Button */}
+      <button className="view-toggle" onClick={toggleViewMode} aria-label={`Switch to ${viewMode === 'map' ? 'list' : 'map'} view`}>
+        {viewMode === 'map' ? (
+          // List icon
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 5H17M3 10H17M3 15H17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        ) : (
+          // Globe icon
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.5"/>
+            <ellipse cx="10" cy="10" rx="3" ry="7.5" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M3 10H17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        )}
+      </button>
 
-      {/* Instruction overlay - shows when no country selected and user hasn't interacted */}
-      <div className={`map-instruction-overlay ${selectedCountry || hasInteracted ? 'hidden' : ''}`}>
-        <span className="instruction-text">Select a country to explore active tournaments</span>
-      </div>
+      {viewMode === 'map' ? (
+        <>
+          <svg ref={svgRef} className="world-map" />
 
-      {/* Tournament panel */}
-      {selectedCountry && countryTournaments.length > 0 && (
-        <div
-          className="tournament-panel"
-          style={{ left: panelPosition.x, top: panelPosition.y }}
-        >
-          <div className="panel-header">
-            <h3>{selectedCountry}</h3>
-            <button className="close-btn" onClick={closePanel}>×</button>
+          {/* Instruction overlay - shows when no country selected and user hasn't interacted */}
+          <div className={`map-instruction-overlay ${selectedCountry || hasInteracted ? 'hidden' : ''}`}>
+            <span className="instruction-text">Select a country to explore active tournaments</span>
           </div>
-          <div className="tournament-list">
-            {countryTournaments.map((tournament) => (
-              <div
-                key={tournament.id}
-                className={`tournament-item ${tournament.status} tour-${tournament.tour.toLowerCase().replace('/', '-')}`}
-                onClick={() => onTournamentSelect(tournament)}
-              >
-                <div className="tournament-info">
-                  <div className="tournament-name-row">
-                    <span className={`tour-badge tour-${tournament.tour.toLowerCase().replace('/', '-')}`}>
-                      {tournament.tour === 'ATP/WTA' ? 'ATP+WTA' : tournament.tour}
-                    </span>
-                    <span className="tournament-name">{tournament.name}</span>
-                  </div>
-                  <span className="tournament-meta">
-                    {tournament.category} • {tournament.surface}
-                  </span>
-                </div>
-                <div className="tournament-status">
-                  {tournament.status === 'active' ? (
-                    <>
-                      <span className="live-indicator" />
-                      <span className="round">{tournament.round}</span>
-                    </>
-                  ) : tournament.status === 'completed' ? (
-                    <>
-                      <span className="completed-indicator">✓</span>
-                      <span className="round completed">{tournament.round}</span>
-                    </>
-                  ) : (
-                    <span className="days-until">
-                      {tournament.startDate === null
-                        ? 'Upcoming'
-                        : daysUntil(tournament.startDate) <= 0
-                          ? 'Starting today'
-                          : `In ${daysUntil(tournament.startDate)} days`}
-                    </span>
-                  )}
-                </div>
+
+          {/* Tournament panel */}
+          {selectedCountry && countryTournaments.length > 0 && (
+            <div
+              className="tournament-panel"
+              style={{ left: panelPosition.x, top: panelPosition.y }}
+            >
+              <div className="panel-header">
+                <h3>{selectedCountry}</h3>
+                <button className="close-btn" onClick={closePanel}>×</button>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+              <div className="tournament-list">
+                {countryTournaments.map((tournament) => (
+                  <div
+                    key={tournament.id}
+                    className={`tournament-item ${tournament.status} tour-${tournament.tour.toLowerCase().replace('/', '-')}`}
+                    onClick={() => onTournamentSelect(tournament)}
+                  >
+                    <div className="tournament-info">
+                      <div className="tournament-name-row">
+                        <span className={`tour-badge tour-${tournament.tour.toLowerCase().replace('/', '-')}`}>
+                          {tournament.tour === 'ATP/WTA' ? 'ATP+WTA' : tournament.tour}
+                        </span>
+                        <span className="tournament-name">{tournament.name}</span>
+                      </div>
+                      <span className="tournament-meta">
+                        {tournament.category} • {tournament.surface}
+                      </span>
+                    </div>
+                    <div className="tournament-status">
+                      {tournament.status === 'active' ? (
+                        <>
+                          <span className="live-indicator" />
+                          <span className="round">{tournament.round}</span>
+                        </>
+                      ) : tournament.status === 'completed' ? (
+                        <>
+                          <span className="completed-indicator">✓</span>
+                          <span className="round completed">{tournament.round}</span>
+                        </>
+                      ) : (
+                        <span className="days-until">
+                          {tournament.startDate === null
+                            ? 'Upcoming'
+                            : daysUntil(tournament.startDate) <= 0
+                              ? 'Starting today'
+                              : `In ${daysUntil(tournament.startDate)} days`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-      {/* Legend */}
-      <div className="map-legend">
-        <div className="legend-item">
-          <span className="legend-dot active" />
-          <span>Active / Upcoming</span>
-        </div>
-      </div>
+          {/* Legend */}
+          <div className="map-legend">
+            <div className="legend-item">
+              <span className="legend-dot active" />
+              <span>Active / Upcoming</span>
+            </div>
+          </div>
+        </>
+      ) : (
+        <TournamentListView
+          tournaments={tournaments}
+          onTournamentSelect={onTournamentSelect}
+        />
+      )}
     </div>
   )
 }
