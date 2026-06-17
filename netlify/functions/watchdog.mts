@@ -426,62 +426,54 @@ export default async function handler(request: Request, context: Context) {
     state.consecutive_failures += 1;
     console.log(`\n[RECOVERY] Failures detected (${state.consecutive_failures} consecutive)`);
 
-    if (state.consecutive_failures <= MAX_CONSECUTIVE_FAILURES) {
-      console.log("[RECOVERY] Triggering prediction pipeline...");
-      const recoveryResult = await triggerRecovery();
-      results.checks = { ...results.checks as object, recovery: recoveryResult };
-      (results.actions as string[]).push("triggered_recovery");
+    // ALWAYS attempt recovery - don't give up after 3 failures
+    // Railway crons can be unreliable for extended periods
+    console.log("[RECOVERY] Triggering prediction pipeline...");
+    const recoveryResult = await triggerRecovery();
+    results.checks = { ...results.checks as object, recovery: recoveryResult };
+    (results.actions as string[]).push("triggered_recovery");
 
-      if (recoveryResult.healthy) {
-        console.log("  ✓ Recovery successful");
-        state.consecutive_failures = 0;
-
-        await sendDiscordAlert(
-          "Auto-Recovery Successful",
-          `Watchdog detected missing predictions and triggered recovery.\n\n**Status:** Pipeline executed successfully`,
-          0x00ff00 // Green
-        );
-
-        await updateWatchdogState({
-          consecutive_failures: 0,
-          last_recovery: new Date().toISOString(),
-          last_check: new Date().toISOString()
-        });
-      } else {
-        console.log(`  ✗ Recovery failed: ${recoveryResult.message}`);
-
-        await sendDiscordAlert(
-          "Recovery Failed",
-          `Watchdog attempted recovery but it failed.\n\n**Error:** ${recoveryResult.message}\n**Failures:** ${state.consecutive_failures} consecutive`,
-          0xff0000
-        );
-
-        await updateWatchdogState({
-          consecutive_failures: state.consecutive_failures,
-          last_check: new Date().toISOString()
-        });
-      }
-    } else {
-      // Escalate
-      console.log(`[ESCALATE] ${state.consecutive_failures} failures - manual intervention required`);
-      (results.actions as string[]).push("escalated");
+    if (recoveryResult.healthy) {
+      console.log("  ✓ Recovery successful");
+      state.consecutive_failures = 0;
 
       await sendDiscordAlert(
-        "🚨 CRITICAL: Manual Intervention Required",
-        `Watchdog has failed ${state.consecutive_failures} times consecutively.\n\n` +
-        `**Service Health:** ${healthResult.message}\n` +
-        `**Predictions:** ${predResult.message}\n\n` +
-        `**Action Required:** Check Railway dashboard and logs manually.`,
-        0xff0000,
-        [
-          { name: "Consecutive Failures", value: String(state.consecutive_failures), inline: true },
-          { name: "Last Recovery", value: state.last_recovery || "Never", inline: true }
-        ]
+        "Auto-Recovery Successful",
+        `Watchdog detected missing predictions and triggered recovery.\n\n**Status:** Pipeline executed successfully` +
+        (state.consecutive_failures > MAX_CONSECUTIVE_FAILURES ? `\n**Note:** Recovered after ${state.consecutive_failures} failures` : ""),
+        0x00ff00 // Green
       );
 
       await updateWatchdogState({
+        consecutive_failures: 0,
+        last_recovery: new Date().toISOString(),
+        last_check: new Date().toISOString()
+      });
+    } else {
+      console.log(`  ✗ Recovery failed: ${recoveryResult.message}`);
+
+      // Escalate alerts after MAX_CONSECUTIVE_FAILURES, but only alert every 6 failures to reduce noise
+      const shouldAlert = state.consecutive_failures <= MAX_CONSECUTIVE_FAILURES ||
+                          state.consecutive_failures % 6 === 0;
+
+      if (shouldAlert) {
+        const isEscalation = state.consecutive_failures > MAX_CONSECUTIVE_FAILURES;
+        await sendDiscordAlert(
+          isEscalation ? "🚨 CRITICAL: Persistent Failure" : "Recovery Failed",
+          `Watchdog attempted recovery but it failed.\n\n**Error:** ${recoveryResult.message}\n**Failures:** ${state.consecutive_failures} consecutive` +
+          (isEscalation ? `\n\n**Action Required:** Check Railway dashboard and logs manually.` : ""),
+          0xff0000,
+          isEscalation ? [
+            { name: "Consecutive Failures", value: String(state.consecutive_failures), inline: true },
+            { name: "Last Recovery", value: state.last_recovery || "Never", inline: true }
+          ] : undefined
+        );
+        (results.actions as string[]).push(isEscalation ? "escalated" : "alerted");
+      }
+
+      await updateWatchdogState({
         consecutive_failures: state.consecutive_failures,
-        last_alert: new Date().toISOString(),
+        last_alert: shouldAlert ? new Date().toISOString() : state.last_alert,
         last_check: new Date().toISOString()
       });
     }
