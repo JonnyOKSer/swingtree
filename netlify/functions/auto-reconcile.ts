@@ -19,6 +19,39 @@ interface ReconciliationResult {
 const ESPN_ATP_URL = 'https://site.api.espn.com/apis/site/v2/sports/tennis/atp/scoreboard'
 const ESPN_WTA_URL = 'https://site.api.espn.com/apis/site/v2/sports/tennis/wta/scoreboard'
 
+// Chinese surnames for proper name parsing (surname appears first in Chinese names)
+const CHINESE_SURNAMES = new Set([
+  'zheng', 'wang', 'zhang', 'liu', 'chen', 'yang', 'huang', 'zhao', 'wu', 'zhou',
+  'xu', 'sun', 'ma', 'zhu', 'hu', 'guo', 'lin', 'he', 'gao', 'luo', 'peng', 'yuan',
+  'lu', 'han', 'shi', 'bai', 'xie', 'zeng', 'shen', 'qiu', 'wen', 'li'
+])
+
+// Extract last name for fuzzy matching (handles "D. Shnaider", "Zheng Qinwen", etc.)
+function getLastName(name: string): string {
+  if (!name) return ''
+  const clean = name.toLowerCase().trim().replace(/\./g, '').replace(/-/g, ' ')
+  const parts = clean.split(' ').filter(p => p.length > 0)
+  if (parts.length === 0) return ''
+  if (parts.length === 1) return parts[0]
+
+  // Check for Chinese surnames
+  if (CHINESE_SURNAMES.has(parts[0])) return parts[0]
+  if (CHINESE_SURNAMES.has(parts[parts.length - 1])) return parts[parts.length - 1]
+
+  // Handle "Ugo Carabelli C." -> "carabelli"
+  if (parts.length >= 3 && parts[parts.length - 1].length <= 2) {
+    return parts[parts.length - 2]
+  }
+
+  // If last part is initial, use first substantial part
+  if (parts[parts.length - 1].length <= 2) return parts[0]
+
+  // If first part is initial, use last part
+  if (parts[0].length <= 2) return parts[parts.length - 1]
+
+  return parts[parts.length - 1]
+}
+
 async function fetchESPNCompletedMatches(tour: 'ATP' | 'WTA'): Promise<Map<string, { winner: string; loser: string; score: string }>> {
   const url = tour === 'ATP' ? ESPN_ATP_URL : ESPN_WTA_URL
   const results = new Map<string, { winner: string; loser: string; score: string }>()
@@ -46,15 +79,78 @@ async function fetchESPNCompletedMatches(tour: 'ATP' | 'WTA'): Promise<Map<strin
             const loserName = loser.athlete?.displayName || ''
             const score = comp.status?.displayName || ''
 
-            // Create normalized key for lookup
+            // Create normalized key for lookup (exact match)
             const key = [winnerName.toLowerCase(), loserName.toLowerCase()].sort().join('|')
             results.set(key, { winner: winnerName, loser: loserName, score })
+
+            // Also add last-name key for fuzzy matching
+            const lastNameKey = [getLastName(winnerName), getLastName(loserName)].sort().join('|')
+            if (lastNameKey !== key && !results.has(lastNameKey)) {
+              results.set(lastNameKey, { winner: winnerName, loser: loserName, score })
+            }
           }
         }
       }
     }
   } catch (error) {
     console.error(`Error fetching ESPN ${tour}:`, error)
+  }
+
+  return results
+}
+
+// Fallback: Fetch completed matches from database (Jeff Sackmann data)
+// This catches matches that have fallen off ESPN's live scoreboard
+async function fetchDatabaseCompletedMatches(pool: any, cutoffDate: Date): Promise<Map<string, { winner: string; loser: string; score: string }>> {
+  const results = new Map<string, { winner: string; loser: string; score: string }>()
+
+  try {
+    // Query ATP matches
+    const atpResult = await pool.query(`
+      SELECT winner_name, loser_name, score, tourney_date
+      FROM matches
+      WHERE tourney_date >= $1
+        AND winner_name IS NOT NULL
+        AND loser_name IS NOT NULL
+      ORDER BY tourney_date DESC
+    `, [cutoffDate.toISOString().split('T')[0]])
+
+    for (const row of atpResult.rows) {
+      const key = [row.winner_name.toLowerCase(), row.loser_name.toLowerCase()].sort().join('|')
+      if (!results.has(key)) {
+        results.set(key, { winner: row.winner_name, loser: row.loser_name, score: row.score || '' })
+      }
+      // Also add last-name key
+      const lastNameKey = [getLastName(row.winner_name), getLastName(row.loser_name)].sort().join('|')
+      if (!results.has(lastNameKey)) {
+        results.set(lastNameKey, { winner: row.winner_name, loser: row.loser_name, score: row.score || '' })
+      }
+    }
+
+    // Query WTA matches
+    const wtaResult = await pool.query(`
+      SELECT winner_name, loser_name, score, tourney_date
+      FROM wta_matches
+      WHERE tourney_date >= $1
+        AND winner_name IS NOT NULL
+        AND loser_name IS NOT NULL
+      ORDER BY tourney_date DESC
+    `, [cutoffDate.toISOString().split('T')[0]])
+
+    for (const row of wtaResult.rows) {
+      const key = [row.winner_name.toLowerCase(), row.loser_name.toLowerCase()].sort().join('|')
+      if (!results.has(key)) {
+        results.set(key, { winner: row.winner_name, loser: row.loser_name, score: row.score || '' })
+      }
+      const lastNameKey = [getLastName(row.winner_name), getLastName(row.loser_name)].sort().join('|')
+      if (!results.has(lastNameKey)) {
+        results.set(lastNameKey, { winner: row.winner_name, loser: row.loser_name, score: row.score || '' })
+      }
+    }
+
+    console.log(`[auto-reconcile] Database: ${atpResult.rows.length} ATP + ${wtaResult.rows.length} WTA matches`)
+  } catch (error) {
+    console.error('[auto-reconcile] Database fallback error:', error)
   }
 
   return results
@@ -93,14 +189,21 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
   try {
     const pool = getPool()
     const cutoffDate = new Date()
-    cutoffDate.setDate(cutoffDate.getDate() - 3) // Look back 3 days
+    cutoffDate.setDate(cutoffDate.getDate() - 7) // Look back 7 days (increased from 3)
 
-    // Fetch ESPN results for both tours
+    // Source 1: Fetch ESPN results for both tours (live scoreboard - recent matches)
     console.log('[auto-reconcile] Fetching ESPN results...')
     const atpResults = await fetchESPNCompletedMatches('ATP')
     const wtaResults = await fetchESPNCompletedMatches('WTA')
-    const allResults = new Map([...atpResults, ...wtaResults])
+    const espnResults = new Map([...atpResults, ...wtaResults])
     console.log(`[auto-reconcile] ESPN: ${atpResults.size} ATP + ${wtaResults.size} WTA completed matches`)
+
+    // Source 2: Fetch database results (Jeff Sackmann data - historical fallback)
+    console.log('[auto-reconcile] Fetching database fallback...')
+    const dbResults = await fetchDatabaseCompletedMatches(pool, cutoffDate)
+
+    // Merge results: ESPN takes priority (more current), database fills gaps
+    const allResults = new Map([...dbResults, ...espnResults])
 
     // Get unreconciled predictions
     const pendingResult = await pool.query(`
@@ -118,13 +221,26 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     let incorrect = 0
 
     for (const pred of pendingResult.rows) {
-      const key = [pred.player_a.toLowerCase(), pred.player_b.toLowerCase()].sort().join('|')
-      const result = allResults.get(key)
+      // Try exact match first
+      const exactKey = [pred.player_a.toLowerCase(), pred.player_b.toLowerCase()].sort().join('|')
+      let result = allResults.get(exactKey)
+
+      // Fallback to last-name matching (handles "D. Shnaider" vs "Diana Shnaider")
+      if (!result) {
+        const lastNameKey = [getLastName(pred.player_a), getLastName(pred.player_b)].sort().join('|')
+        result = allResults.get(lastNameKey)
+      }
 
       if (result) {
-        const isCorrect = pred.predicted_winner === result.winner
+        // Use last-name matching for correctness check (handles name format variations)
+        const predictedLast = getLastName(pred.predicted_winner)
+        const actualWinnerLast = getLastName(result.winner)
+        const isCorrect = predictedLast === actualWinnerLast
         const { fsWinner, fsScore, fsTotalGames } = extractFirstSetScore(result.score, result.winner, result.loser)
-        const fsWinnerCorrect = fsWinner ? pred.first_set_winner === fsWinner : null
+        // Use last-name matching for first set winner check
+        const fsWinnerCorrect = fsWinner && pred.first_set_winner
+          ? getLastName(pred.first_set_winner) === getLastName(fsWinner)
+          : null
         const fsScoreCorrect = fsScore && pred.first_set_score ? pred.first_set_score === fsScore : null
 
         // Calculate O/U 9.5 correctness
@@ -160,7 +276,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       reconciled,
       correct,
       incorrect,
-      source: 'ESPN'
+      source: 'ESPN+Database'
     }
 
     console.log(`[auto-reconcile] Complete: ${reconciled} reconciled (${correct} correct, ${incorrect} incorrect)`)

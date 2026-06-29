@@ -14,7 +14,9 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# Scheduled function: Auto-reconcile every 10 minutes (ESPN-based)
+# Scheduled function: Auto-reconcile every 10 minutes
+# PRIMARY reconciliation engine - uses ESPN + database fallback
+# Railway auto-reconcile is BACKUP only (has cron reliability issues)
 [functions."auto-reconcile"]
   schedule = "*/10 * * * *"
 
