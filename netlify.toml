@@ -14,8 +14,14 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# Scheduled function: Capture results every 15 minutes
+# Copies completed matches from draw_matches to permanent match_results table
+# CRITICAL: This ensures we have results even after tournaments end
+[functions."capture-results"]
+  schedule = "*/15 * * * *"
+
 # Scheduled function: Auto-reconcile every 10 minutes
-# PRIMARY reconciliation engine - uses ESPN + database fallback
+# PRIMARY reconciliation engine - uses match_results (permanent) + draw_matches + ESPN
 # Railway auto-reconcile is BACKUP only (has cron reliability issues)
 [functions."auto-reconcile"]
   schedule = "*/10 * * * *"

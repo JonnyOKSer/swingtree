@@ -99,8 +99,40 @@ async function fetchESPNCompletedMatches(tour: 'ATP' | 'WTA'): Promise<Map<strin
   return results
 }
 
-// Fallback 1: Fetch completed matches from draw_matches (ESPN-synced, updated every 30 min)
-// This is the most reliable source for recent completed matches
+// Source 1: Fetch from match_results (our permanent results database)
+// This is the PRIMARY source - populated by capture-results from draw_matches
+async function fetchMatchResults(pool: any, cutoffDate: Date): Promise<Map<string, { winner: string; loser: string; score: string }>> {
+  const results = new Map<string, { winner: string; loser: string; score: string }>()
+
+  try {
+    const resultRows = await pool.query(`
+      SELECT player_1_name, player_2_name, winner_name, loser_name, final_result, scheduled_date
+      FROM match_results
+      WHERE scheduled_date >= $1
+      ORDER BY scheduled_date DESC
+    `, [cutoffDate.toISOString().split('T')[0]])
+
+    for (const row of resultRows.rows) {
+      const key = [row.player_1_name.toLowerCase(), row.player_2_name.toLowerCase()].sort().join('|')
+      if (!results.has(key)) {
+        results.set(key, { winner: row.winner_name, loser: row.loser_name, score: row.final_result || '' })
+      }
+      const lastNameKey = [getLastName(row.player_1_name), getLastName(row.player_2_name)].sort().join('|')
+      if (!results.has(lastNameKey)) {
+        results.set(lastNameKey, { winner: row.winner_name, loser: row.loser_name, score: row.final_result || '' })
+      }
+    }
+
+    console.log(`[auto-reconcile] match_results: ${resultRows.rows.length} permanent results`)
+  } catch (error) {
+    // Table might not exist yet - that's ok, capture-results will create it
+    console.log('[auto-reconcile] match_results table not found, skipping')
+  }
+
+  return results
+}
+
+// Source 2: Fetch from draw_matches (ESPN-synced, 14-day window - fallback for very recent)
 async function fetchDrawMatchesCompleted(pool: any, cutoffDate: Date): Promise<Map<string, { winner: string; loser: string; score: string }>> {
   const results = new Map<string, { winner: string; loser: string; score: string }>()
 
@@ -137,62 +169,6 @@ async function fetchDrawMatchesCompleted(pool: any, cutoffDate: Date): Promise<M
   return results
 }
 
-// Fallback 2: Fetch completed matches from database (Jeff Sackmann historical data)
-// This catches older matches that might not be in draw_matches anymore
-async function fetchDatabaseCompletedMatches(pool: any, cutoffDate: Date): Promise<Map<string, { winner: string; loser: string; score: string }>> {
-  const results = new Map<string, { winner: string; loser: string; score: string }>()
-
-  try {
-    // Query ATP matches
-    const atpResult = await pool.query(`
-      SELECT winner_name, loser_name, score, tourney_date
-      FROM matches
-      WHERE tourney_date >= $1
-        AND winner_name IS NOT NULL
-        AND loser_name IS NOT NULL
-      ORDER BY tourney_date DESC
-    `, [cutoffDate.toISOString().split('T')[0]])
-
-    for (const row of atpResult.rows) {
-      const key = [row.winner_name.toLowerCase(), row.loser_name.toLowerCase()].sort().join('|')
-      if (!results.has(key)) {
-        results.set(key, { winner: row.winner_name, loser: row.loser_name, score: row.score || '' })
-      }
-      // Also add last-name key
-      const lastNameKey = [getLastName(row.winner_name), getLastName(row.loser_name)].sort().join('|')
-      if (!results.has(lastNameKey)) {
-        results.set(lastNameKey, { winner: row.winner_name, loser: row.loser_name, score: row.score || '' })
-      }
-    }
-
-    // Query WTA matches
-    const wtaResult = await pool.query(`
-      SELECT winner_name, loser_name, score, tourney_date
-      FROM wta_matches
-      WHERE tourney_date >= $1
-        AND winner_name IS NOT NULL
-        AND loser_name IS NOT NULL
-      ORDER BY tourney_date DESC
-    `, [cutoffDate.toISOString().split('T')[0]])
-
-    for (const row of wtaResult.rows) {
-      const key = [row.winner_name.toLowerCase(), row.loser_name.toLowerCase()].sort().join('|')
-      if (!results.has(key)) {
-        results.set(key, { winner: row.winner_name, loser: row.loser_name, score: row.score || '' })
-      }
-      const lastNameKey = [getLastName(row.winner_name), getLastName(row.loser_name)].sort().join('|')
-      if (!results.has(lastNameKey)) {
-        results.set(lastNameKey, { winner: row.winner_name, loser: row.loser_name, score: row.score || '' })
-      }
-    }
-
-    console.log(`[auto-reconcile] Sackmann: ${atpResult.rows.length} ATP + ${wtaResult.rows.length} WTA matches`)
-  } catch (error) {
-    console.error('[auto-reconcile] Database fallback error:', error)
-  }
-
-  return results
-}
 
 function extractFirstSetScore(score: string, winner: string, loser: string): { fsWinner: string | null; fsScore: string | null; fsTotalGames: number | null } {
   if (!score) return { fsWinner: null, fsScore: null, fsTotalGames: null }
@@ -229,24 +205,24 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - 7) // Look back 7 days (increased from 3)
 
-    // Source 1: Fetch ESPN live scoreboard (most current, but limited window)
-    console.log('[auto-reconcile] Fetching ESPN results...')
+    // Source 1: match_results (our permanent database - PRIMARY)
+    console.log('[auto-reconcile] Fetching match_results (permanent)...')
+    const permanentResults = await fetchMatchResults(pool, cutoffDate)
+
+    // Source 2: draw_matches (ESPN-synced, 14-day window - for very recent)
+    console.log('[auto-reconcile] Fetching draw_matches (recent)...')
+    const drawResults = await fetchDrawMatchesCompleted(pool, cutoffDate)
+
+    // Source 3: ESPN live scoreboard (real-time, last 24-48h only)
+    console.log('[auto-reconcile] Fetching ESPN live...')
     const atpResults = await fetchESPNCompletedMatches('ATP')
     const wtaResults = await fetchESPNCompletedMatches('WTA')
     const espnResults = new Map([...atpResults, ...wtaResults])
-    console.log(`[auto-reconcile] ESPN live: ${atpResults.size} ATP + ${wtaResults.size} WTA completed`)
+    console.log(`[auto-reconcile] ESPN live: ${atpResults.size} ATP + ${wtaResults.size} WTA`)
 
-    // Source 2: Fetch draw_matches (ESPN-synced every 30 min, best for recent matches)
-    console.log('[auto-reconcile] Fetching draw_matches...')
-    const drawResults = await fetchDrawMatchesCompleted(pool, cutoffDate)
-
-    // Source 3: Fetch Sackmann database (historical, may be delayed 1-3 days)
-    console.log('[auto-reconcile] Fetching Sackmann database...')
-    const dbResults = await fetchDatabaseCompletedMatches(pool, cutoffDate)
-
-    // Merge results: ESPN live > draw_matches > Sackmann database
-    // Later sources override earlier ones (more current data wins)
-    const allResults = new Map([...dbResults, ...drawResults, ...espnResults])
+    // Merge results: permanent > draw_matches > ESPN live
+    // Earlier sources have priority (permanent is most reliable)
+    const allResults = new Map([...espnResults, ...drawResults, ...permanentResults])
 
     // Get unreconciled predictions
     const pendingResult = await pool.query(`
@@ -319,7 +295,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       reconciled,
       correct,
       incorrect,
-      source: 'ESPN+Database'
+      source: 'match_results+draw_matches+ESPN'
     }
 
     console.log(`[auto-reconcile] Complete: ${reconciled} reconciled (${correct} correct, ${incorrect} incorrect)`)
