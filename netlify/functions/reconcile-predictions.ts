@@ -113,52 +113,59 @@ async function resolveOrphanedPredictions(pool: ReturnType<typeof getPool>): Pro
 
 async function reconcilePredictionResults(pool: ReturnType<typeof getPool>): Promise<number> {
   // Find predictions for finished matches that haven't been reconciled
+  // Use winner_name for comparison since winner_key is often not populated
   const unreconciled = await pool.query(`
     SELECT
       ap.id,
       ap.match_key,
       ap.predicted_winner_key,
+      ap.predicted_winner_name,
       ap.first_set_winner_key,
+      ap.first_set_winner_name,
       ap.first_set_score AS predicted_first_set_score,
       dm.winner_key AS actual_winner_key,
+      dm.winner_name AS actual_winner_name,
+      dm.player_1_name,
+      dm.player_2_name,
       dm.final_result
     FROM ashe_predictions ap
     JOIN draw_matches dm ON ap.match_key = dm.match_key
     WHERE dm.status = 'finished'
-      AND dm.winner_key IS NOT NULL
+      AND dm.winner_name IS NOT NULL
       AND ap.result IS NULL
   `);
 
   let reconciled = 0;
 
   for (const row of unreconciled.rows) {
-    // Determine if prediction was correct
-    const predictionCorrect = row.predicted_winner_key === row.actual_winner_key;
+    // Determine if prediction was correct using name matching
+    // Compare last names (case-insensitive) since full names may have slight variations
+    const predictedLast = getLastName(row.predicted_winner_name || '');
+    const actualLast = getLastName(row.actual_winner_name || '');
+    const predictionCorrect = predictedLast.length > 0 && predictedLast === actualLast;
 
     // Parse first set from final_result if available
-    let firstSetResult: string | null = null;
-    let actualFirstSetWinner: number | null = null;
+    let firstSetPredictionResult: string | null = null;
 
-    if (row.final_result) {
+    if (row.final_result && row.first_set_winner_name) {
       const firstSetMatch = parseFirstSet(row.final_result);
       if (firstSetMatch) {
-        // Determine who won first set
+        // Determine who won first set based on score
         // final_result format: "6-4 6-3" means player 1 won 6-4, 6-3
-        // We need to know which player is "first" in the result
-        // For now, assume first number is player_1's score
-        // TODO: Verify this assumption with api-tennis data
-        actualFirstSetWinner = firstSetMatch.p1Score > firstSetMatch.p2Score
-          ? row.player_1_key
-          : row.player_2_key;
-      }
-    }
+        const actualFirstSetWinnerName = firstSetMatch.p1Score > firstSetMatch.p2Score
+          ? row.player_1_name
+          : row.player_2_name;
 
-    // Determine first set prediction result
-    let firstSetPredictionResult: string | null = null;
-    if (row.first_set_winner_key && actualFirstSetWinner) {
-      firstSetPredictionResult = row.first_set_winner_key === actualFirstSetWinner
-        ? "correct"
-        : "incorrect";
+        // Compare predicted first set winner to actual
+        const predictedFirstSetLast = getLastName(row.first_set_winner_name || '');
+        const actualFirstSetLast = getLastName(actualFirstSetWinnerName || '');
+
+        if (predictedFirstSetLast.length > 0 && actualFirstSetLast.length > 0) {
+          firstSetPredictionResult = predictedFirstSetLast === actualFirstSetLast
+            ? "correct"
+            : "incorrect";
+        }
+      }
     }
 
     // Update prediction
@@ -180,6 +187,20 @@ async function reconcilePredictionResults(pool: ReturnType<typeof getPool>): Pro
   }
 
   return reconciled;
+}
+
+/**
+ * Extract last name from full name for comparison
+ */
+function getLastName(name: string): string {
+  if (!name) return '';
+  // Remove parentheticals like (USA), Jr., etc.
+  const cleaned = name
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/\s+Jr\.?$/i, '')
+    .trim();
+  const parts = cleaned.split(/\s+/);
+  return (parts[parts.length - 1] || '').toLowerCase();
 }
 
 /**
