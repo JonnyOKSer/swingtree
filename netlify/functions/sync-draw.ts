@@ -125,6 +125,33 @@ async function syncDrawFromFixtures(fixtures: ApiTennisFixture[]): Promise<SyncR
       errors: []
     };
 
+    // Determine the expected tour for this tournament
+    // First check the database for existing matches, then fall back to counting fixtures
+    // This prevents WTA matches from being synced to ATP tournaments and vice versa
+    let dominantTour: string | null = null;
+
+    // Check database for existing tournament tour
+    const existingTour = await pool.query(`
+      SELECT tour FROM draw_matches
+      WHERE tournament_key = $1 AND tour IS NOT NULL
+      LIMIT 1
+    `, [tournamentKey]);
+
+    if (existingTour.rows.length > 0) {
+      dominantTour = existingTour.rows[0].tour;
+    } else {
+      // Fall back to counting fixture tour types
+      const tourCounts = new Map<string, number>();
+      for (const f of tournamentFixtures) {
+        const t = detectTour(f.event_type_type);
+        if (t) {
+          tourCounts.set(t, (tourCounts.get(t) || 0) + 1);
+        }
+      }
+      dominantTour = Array.from(tourCounts.entries())
+        .sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+    }
+
     for (const fixture of tournamentFixtures) {
       try {
         // Normalize round
@@ -140,6 +167,13 @@ async function syncDrawFromFixtures(fixtures: ApiTennisFixture[]): Promise<SyncR
 
         // Detect tour
         const tour = detectTour(fixture.event_type_type);
+
+        // Skip matches that don't match the tournament's dominant tour
+        // This prevents WTA matches from polluting ATP draws and vice versa
+        if (dominantTour && tour && tour !== dominantTour) {
+          console.log(`[sync-draw] Skipping mismatched tour: ${fixture.event_first_player} vs ${fixture.event_second_player} (${tour} in ${dominantTour} tournament)`);
+          continue;
+        }
 
         // Map status
         const status = mapEventStatus(fixture.event_status);
