@@ -1,7 +1,11 @@
 /**
  * Fix Live Status - Updates draw_matches status using ESPN data
  *
- * A simple function to fix stale "live" statuses by checking ESPN for completed matches.
+ * Updates BOTH:
+ * - "live" matches that are now finished
+ * - "upcoming" matches that are past their scheduled date and now finished
+ *
+ * This fixes stale statuses when api-tennis.com sync fails to update them.
  * Does NOT use api-tennis.com API.
  *
  * GET /api/fix-live-status
@@ -17,6 +21,7 @@ interface EspnMatch {
   player1: string;
   player2: string;
   winner: string;
+  score: string;
   tour: 'ATP' | 'WTA';
 }
 
@@ -66,7 +71,17 @@ async function fetchCompletedMatches(tour: 'ATP' | 'WTA'): Promise<EspnMatch[]> 
 
           if (!winner) continue;
 
-          matches.push({ player1, player2, winner, tour });
+          // Extract score from notes or linescores
+          let score = '';
+          const notes = comp.notes || [];
+          const eventNote = notes.find((n: any) => n.type === 'event');
+          if (eventNote?.text) {
+            // Format: "Player A (COUNTRY) bt Player B (COUNTRY) 6-4 7-5"
+            const scoreMatch = eventNote.text.match(/\d+-\d+(?:\s+\d+-\d+)*/);
+            if (scoreMatch) score = scoreMatch[0];
+          }
+
+          matches.push({ player1, player2, winner, score, tour });
         }
       }
     }
@@ -93,21 +108,30 @@ const handler: Handler = async (event: HandlerEvent) => {
   const pool = getPool();
 
   try {
-    // Get live matches from database
-    const liveResult = await pool.query(`
-      SELECT match_key, player_1_name, player_2_name, tour, tournament_name
+    // Get BOTH live matches AND stale upcoming matches (scheduled before today)
+    // This catches matches that api-tennis.com failed to update
+    const staleResult = await pool.query(`
+      SELECT match_key, player_1_name, player_2_name, tour, tournament_name, status, scheduled_date
       FROM draw_matches
-      WHERE status = 'live'
-      LIMIT 50
+      WHERE (
+        status = 'live'
+        OR (status = 'upcoming' AND scheduled_date < CURRENT_DATE)
+      )
+      AND player_1_name IS NOT NULL
+      AND player_2_name IS NOT NULL
+      ORDER BY scheduled_date DESC
+      LIMIT 100
     `);
 
-    if (liveResult.rows.length === 0) {
+    console.log(`[fix-live] Found ${staleResult.rows.length} stale matches (live or overdue upcoming)`);
+
+    if (staleResult.rows.length === 0) {
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           success: true,
-          message: "No live matches to update",
+          message: "No stale matches to update",
           updated: 0
         })
       };
@@ -125,26 +149,29 @@ const handler: Handler = async (event: HandlerEvent) => {
     let updated = 0;
     const updates: string[] = [];
 
-    // Match live matches against completed ESPN matches
-    for (const liveMatch of liveResult.rows) {
+    // Match stale matches against completed ESPN matches
+    for (const dbMatch of staleResult.rows) {
       for (const espnMatch of completedMatches) {
-        const matchesP1 = playersMatch(liveMatch.player_1_name, espnMatch.player1) ||
-                          playersMatch(liveMatch.player_1_name, espnMatch.player2);
-        const matchesP2 = playersMatch(liveMatch.player_2_name, espnMatch.player1) ||
-                          playersMatch(liveMatch.player_2_name, espnMatch.player2);
+        const matchesP1 = playersMatch(dbMatch.player_1_name, espnMatch.player1) ||
+                          playersMatch(dbMatch.player_1_name, espnMatch.player2);
+        const matchesP2 = playersMatch(dbMatch.player_2_name, espnMatch.player1) ||
+                          playersMatch(dbMatch.player_2_name, espnMatch.player2);
 
         if (matchesP1 && matchesP2) {
-          // Found the match - update to finished
+          // Found the match - update to finished with winner and score
           await pool.query(`
             UPDATE draw_matches
             SET status = 'finished',
-                winner_name = $2
+                winner_name = $2,
+                final_result = COALESCE($3, final_result),
+                updated_at = NOW()
             WHERE match_key = $1
-          `, [liveMatch.match_key, espnMatch.winner]);
+          `, [dbMatch.match_key, espnMatch.winner, espnMatch.score || null]);
 
           updated++;
-          updates.push(`${liveMatch.player_1_name} vs ${liveMatch.player_2_name} → ${espnMatch.winner}`);
-          console.log(`[fix-live] Updated: ${liveMatch.player_1_name} vs ${liveMatch.player_2_name}`);
+          const prevStatus = dbMatch.status;
+          updates.push(`[${prevStatus}] ${dbMatch.player_1_name} vs ${dbMatch.player_2_name} → ${espnMatch.winner} (${espnMatch.score || 'no score'})`);
+          console.log(`[fix-live] Updated ${prevStatus}: ${dbMatch.player_1_name} vs ${dbMatch.player_2_name}`);
           break;
         }
       }
@@ -155,7 +182,7 @@ const handler: Handler = async (event: HandlerEvent) => {
       headers,
       body: JSON.stringify({
         success: true,
-        liveMatches: liveResult.rows.length,
+        staleMatches: staleResult.rows.length,
         espnCompleted: completedMatches.length,
         updated,
         updates
