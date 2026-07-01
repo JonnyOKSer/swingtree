@@ -348,6 +348,43 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       drawByRound[round].push(match)
     }
 
+    // CRITICAL FIX: Cross-round deduplication
+    // A player pair can only play ONCE per tournament. If the same match appears in
+    // multiple rounds (due to ESPN/data source bugs), keep only the EARLIEST round
+    // (where the match actually happened). Later rounds should show different opponents.
+    const ROUND_PRECEDENCE: Record<string, number> = {
+      'R128': 1, 'R64': 2, 'R32': 3, 'R16': 4, 'QF': 5, 'SF': 6, 'F': 7
+    }
+    const playerEarliestRound = new Map<string, string>()
+
+    // First pass: find the EARLIEST round for each player pair
+    for (const round of Object.keys(drawByRound)) {
+      for (const match of drawByRound[round]) {
+        const playerKey = [getLastName(match.player_1_name), getLastName(match.player_2_name)].sort().join('|')
+        const existingRound = playerEarliestRound.get(playerKey)
+        const currentPrecedence = ROUND_PRECEDENCE[round] || 99
+        const existingPrecedence = existingRound ? (ROUND_PRECEDENCE[existingRound] || 99) : 999
+
+        if (currentPrecedence < existingPrecedence) {
+          playerEarliestRound.set(playerKey, round)
+        }
+      }
+    }
+
+    // Second pass: remove matches from non-earliest rounds (duplicate pollution)
+    let duplicatesRemoved = 0
+    for (const round of Object.keys(drawByRound)) {
+      const before = drawByRound[round].length
+      drawByRound[round] = drawByRound[round].filter(match => {
+        const playerKey = [getLastName(match.player_1_name), getLastName(match.player_2_name)].sort().join('|')
+        return playerEarliestRound.get(playerKey) === round
+      })
+      duplicatesRemoved += before - drawByRound[round].length
+    }
+    if (duplicatesRemoved > 0) {
+      console.log(`[DRAW] Removed ${duplicatesRemoved} cross-round duplicate matches`)
+    }
+
     // Step 3a-hybrid: Fetch ESPN matches as fallback for missing api-tennis data
     // This handles cases where api-tennis hasn't updated with new round matchups yet
     const espnMatches = await fetchESPNMatches(tournamentSlug, tour)
