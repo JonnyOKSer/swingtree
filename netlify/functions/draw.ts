@@ -716,6 +716,9 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       return [targetRound]
     }
 
+    // Track which player pairs have been used in output to prevent duplicates
+    const usedPlayerPairs = new Set<string>()
+
     for (let roundIndex = 0; roundIndex < config.rounds.length; roundIndex++) {
       const roundName = config.rounds[roundIndex]
       const matchCount = config.matchCounts[roundName]
@@ -725,8 +728,16 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       let drawMatches: any[] = []
       for (const espnRound of espnRounds) {
         if (drawByRound[espnRound] && drawByRound[espnRound].length > 0) {
-          drawMatches = drawByRound[espnRound]
-          break  // Use first match found
+          // CRITICAL: Filter out matches that have already been used in previous rounds
+          // This prevents duplicate player pairs from appearing in multiple rounds
+          const freshMatches = drawByRound[espnRound].filter(m => {
+            const playerKey = [getLastName(m.player_1_name), getLastName(m.player_2_name)].sort().join('|')
+            return !usedPlayerPairs.has(playerKey)
+          })
+          if (freshMatches.length > 0) {
+            drawMatches = freshMatches
+            break
+          }
         }
       }
 
@@ -770,6 +781,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           // We have draw data from api-tennis.com
           const player1 = drawMatch.player_1_name
           const player2 = drawMatch.player_2_name
+
+          // Mark this player pair as used to prevent duplicates in later rounds
+          const usedKey = [getLastName(player1), getLastName(player2)].sort().join('|')
+          usedPlayerPairs.add(usedKey)
 
           if ((drawMatch.status === 'finished' || drawMatch.status === 'completed') && drawMatch.winner_name) {
             // Completed match from draw
