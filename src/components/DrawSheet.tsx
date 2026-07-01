@@ -528,7 +528,8 @@ export default function DrawSheet({
                         gap: `${Math.pow(2, roundIndex) * 8}px`
                       }}
                     >
-                      {round.matches.map((match) => (
+                      {/* Sort matches by slot to ensure correct bracket order */}
+                      {[...round.matches].sort((a, b) => a.slot - b.slot).map((match) => (
                         <div key={match.slot} className="match-wrapper">
                           <MatchCard
                             match={match}
