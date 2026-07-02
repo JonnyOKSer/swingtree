@@ -39,6 +39,12 @@
 [functions."fix-live-status"]
   schedule = "*/5 * * * *"
 
+# KEEP-WARM: Prevent Railway cold starts
+# Pings Railway health every 10 minutes to keep service responsive
+# Railway cold starts take 30-40+ seconds, causing watchdog timeouts
+[functions."keep-warm"]
+  schedule = "*/10 * * * *"
+
 # WATCHDOG: External monitor for Tennis Oracle Railway service
 # Checks health every 2 hours, triggers recovery if predictions missing
 # CRITICAL: This runs EXTERNAL to Railway to catch Railway cron failures
