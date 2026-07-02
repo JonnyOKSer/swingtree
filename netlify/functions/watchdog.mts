@@ -23,7 +23,7 @@ const TENNIS_ORACLE_API_KEY = process.env.TENNIS_ORACLE_API_KEY || "";
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_ADMIN_WEBHOOK_URL || "";
 
 const MAX_CONSECUTIVE_FAILURES = 3;
-const HEALTH_CHECK_TIMEOUT = 30000; // 30 seconds
+const HEALTH_CHECK_TIMEOUT = 60000; // 60 seconds (Railway cold starts can be slow)
 const TRIGGER_TIMEOUT = 300000; // 5 minutes
 
 interface WatchdogState {
