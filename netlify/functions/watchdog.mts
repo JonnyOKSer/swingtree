@@ -359,24 +359,25 @@ async function sendDiscordAlert(
 }
 
 export const handler: Handler = async () => {
-  console.log("\n" + "=".repeat(60));
-  console.log(`ASHE WATCHDOG - ${new Date().toISOString()} UTC`);
-  console.log("=".repeat(60));
-
   const headers = {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*"
   };
 
-  const results: Record<string, unknown> = {
-    timestamp: new Date().toISOString(),
-    checks: {},
-    actions: [],
-    overall_healthy: true
-  };
+  try {
+    console.log("\n" + "=".repeat(60));
+    console.log(`ASHE WATCHDOG - ${new Date().toISOString()} UTC`);
+    console.log("=".repeat(60));
 
-  // Load state
-  let state = await getWatchdogState();
+    const results: Record<string, unknown> = {
+      timestamp: new Date().toISOString(),
+      checks: {},
+      actions: [],
+      overall_healthy: true
+    };
+
+    // Load state
+    let state = await getWatchdogState();
   console.log(`[STATE] Consecutive failures: ${state.consecutive_failures}`);
 
   // Step 1: Check service health
@@ -497,13 +498,25 @@ export const handler: Handler = async () => {
     });
   }
 
-  console.log("\n" + "=".repeat(60));
-  console.log(`Watchdog complete. Healthy: ${results.overall_healthy}`);
-  console.log("=".repeat(60) + "\n");
+    console.log("\n" + "=".repeat(60));
+    console.log(`Watchdog complete. Healthy: ${results.overall_healthy}`);
+    console.log("=".repeat(60) + "\n");
 
-  return {
-    statusCode: results.overall_healthy ? 200 : 500,
-    headers,
-    body: JSON.stringify(results)
-  };
+    return {
+      statusCode: results.overall_healthy ? 200 : 500,
+      headers,
+      body: JSON.stringify(results)
+    };
+  } catch (error) {
+    console.error("[WATCHDOG] Fatal error:", error);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({
+        error: "Watchdog crashed",
+        message: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      })
+    };
+  }
 };
