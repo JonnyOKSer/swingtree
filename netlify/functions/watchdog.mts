@@ -14,8 +14,14 @@
  * 5. Track consecutive failures and escalate after 3
  */
 
-import type { Handler } from "@netlify/functions";
+import type { Handler, Config } from "@netlify/functions";
 import { getPool } from "./db.js";
+
+// Extend function timeout to handle Railway cold starts (can take 40+ seconds)
+export const config: Config = {
+  schedule: "0 */2 * * *", // Every 2 hours (also in netlify.toml)
+  // Background functions can run up to 15 minutes
+};
 
 // Configuration
 const TENNIS_ORACLE_URL = process.env.TENNIS_ORACLE_URL || "https://agent-production-765b.up.railway.app";
