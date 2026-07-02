@@ -14,8 +14,8 @@
  * 5. Track consecutive failures and escalate after 3
  */
 
-import type { Config, Context } from "@netlify/functions";
-import { getPool } from "./db";
+import type { Handler } from "@netlify/functions";
+import { getPool } from "./db.js";
 
 // Configuration
 const TENNIS_ORACLE_URL = process.env.TENNIS_ORACLE_URL || "https://agent-production-765b.up.railway.app";
@@ -358,10 +358,15 @@ async function sendDiscordAlert(
   }
 }
 
-export default async function handler(request: Request, context: Context) {
+export const handler: Handler = async () => {
   console.log("\n" + "=".repeat(60));
   console.log(`ASHE WATCHDOG - ${new Date().toISOString()} UTC`);
   console.log("=".repeat(60));
+
+  const headers = {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*"
+  };
 
   const results: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
@@ -399,10 +404,11 @@ export default async function handler(request: Request, context: Context) {
       last_check: new Date().toISOString()
     });
 
-    return new Response(JSON.stringify(results), {
-      status: 503,
-      headers: { "Content-Type": "application/json" }
-    });
+    return {
+      statusCode: 503,
+      headers,
+      body: JSON.stringify(results)
+    };
   }
 
   // Step 2: Check prediction status
@@ -495,13 +501,9 @@ export default async function handler(request: Request, context: Context) {
   console.log(`Watchdog complete. Healthy: ${results.overall_healthy}`);
   console.log("=".repeat(60) + "\n");
 
-  return new Response(JSON.stringify(results), {
-    status: results.overall_healthy ? 200 : 500,
-    headers: { "Content-Type": "application/json" }
-  });
-}
-
-// Netlify scheduled function config - runs every 2 hours
-export const config: Config = {
-  schedule: "0 */2 * * *"  // Every 2 hours
+  return {
+    statusCode: results.overall_healthy ? 200 : 500,
+    headers,
+    body: JSON.stringify(results)
+  };
 };
