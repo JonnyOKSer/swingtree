@@ -4,7 +4,8 @@
  * This runs on Netlify (EXTERNAL to Railway) to monitor the Tennis Oracle service.
  * It cannot rely on Railway's cron system since that's what we're monitoring.
  *
- * Schedule: Every 2 hours (Railway health_check is every 4h, so we catch failures faster)
+ * Schedule: Every 30 minutes (previously 2h — dropped after a July 2026 miss
+ * where the 2h cadence let a Railway-cron failure sit uncorrected for hours)
  *
  * Flow:
  * 1. Check if Tennis Oracle service is responding
@@ -19,7 +20,7 @@ import { getPool } from "./db.js";
 
 // Extend function timeout to handle Railway cold starts (can take 40+ seconds)
 export const config: Config = {
-  schedule: "0 */2 * * *", // Every 2 hours (also in netlify.toml)
+  schedule: "*/30 * * * *", // Every 30 minutes (also in netlify.toml)
   // Background functions can run up to 15 minutes
 };
 

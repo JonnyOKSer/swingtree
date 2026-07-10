@@ -46,10 +46,17 @@
   schedule = "*/10 * * * *"
 
 # WATCHDOG: External monitor for Tennis Oracle Railway service
-# Checks health every 2 hours, triggers recovery if predictions missing
+# Checks every 30 minutes so missed slots retry quickly instead of waiting 2h.
 # CRITICAL: This runs EXTERNAL to Railway to catch Railway cron failures
 [functions."watchdog"]
-  schedule = "0 */2 * * *"
+  schedule = "*/30 * * * *"
+
+# DAILY TRIGGER: Unconditionally POST /trigger at 09:00 UTC as a redundant
+# path for Railway's own daily-predictions cron. If Railway cron dies silently
+# (has happened twice), this catches it in the morning window instead of
+# waiting for the watchdog to notice something's missing.
+[functions."daily-predictions-trigger-background"]
+  schedule = "0 9 * * *"
 
 # API routes
 [[redirects]]
