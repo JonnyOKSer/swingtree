@@ -4,6 +4,11 @@
  * This runs on Netlify (EXTERNAL to Railway) to monitor the Tennis Oracle service.
  * It cannot rely on Railway's cron system since that's what we're monitoring.
  *
+ * BACKGROUND FUNCTION — the -background suffix in the filename gives us
+ * Netlify's 15-min timeout window. The previous non-background version kept
+ * getting killed at the 26s synchronous cap when Railway responded slowly,
+ * which is exactly when the watchdog is most useful.
+ *
  * Schedule: Every 30 minutes (previously 2h — dropped after a July 2026 miss
  * where the 2h cadence let a Railway-cron failure sit uncorrected for hours)
  *

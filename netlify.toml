@@ -47,8 +47,10 @@
 
 # WATCHDOG: External monitor for Tennis Oracle Railway service
 # Checks every 30 minutes so missed slots retry quickly instead of waiting 2h.
+# Background function (-background suffix) → 15-min timeout instead of 26s,
+# so Railway cold starts no longer kill the check.
 # CRITICAL: This runs EXTERNAL to Railway to catch Railway cron failures
-[functions."watchdog"]
+[functions."watchdog-background"]
   schedule = "*/30 * * * *"
 
 # DAILY TRIGGER: Unconditionally POST /trigger at 09:00 UTC as a redundant
