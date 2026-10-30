@@ -23,6 +23,13 @@ export default defineConfig([
       // The codebase already signals "required by the signature, deliberately
       // unused" by prefixing with an underscore (_context). Honour it, instead
       // of reporting every Netlify handler parameter as dead code.
+      // Hooks belong next to the context or component they serve, and
+      // isTournamentAccessible is tier logic that still needs wiring up — none
+      // of them should be exiled to another file to satisfy a dev-only
+      // fast-refresh constraint.
+      'react-refresh/only-export-components': ['warn', {
+        allowExportNames: ['useAuth', 'useFeatureAccess', 'isTournamentAccessible'],
+      }],
       '@typescript-eslint/no-unused-vars': ['error', {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',

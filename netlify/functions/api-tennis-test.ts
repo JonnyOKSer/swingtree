@@ -15,7 +15,7 @@ const handler: Handler = async (_event: HandlerEvent) => {
 
   const apiKey = process.env.ATP_TENNIS_KEY;
 
-  const diagnostics: any = {
+  const diagnostics: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
     apiKeySet: !!apiKey,
     apiKeyLength: apiKey?.length || 0,

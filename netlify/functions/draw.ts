@@ -94,6 +94,46 @@ function getConfidenceTier(prob: number): string {
   return 'SKIP'
 }
 
+/** A row of draw_matches, as read by this endpoint. */
+interface DrawMatchRow {
+  player_1_name: string
+  player_2_name: string
+  status?: string
+  winner_name?: string | null
+  final_result?: string | null
+}
+
+/** A prediction row joined to a draw match. */
+interface PredictionRow {
+  player1_name?: string
+  player2_name?: string
+  predicted_winner?: string | null
+  predicted_prob?: number | null
+  confidence_tier?: string | null
+  correct?: boolean | null
+  actual_winner?: string | null
+  first_set_winner?: string | null
+  first_set_score?: string | null
+  first_set_score_correct?: boolean | null
+  first_set_over_9_5_prob?: number | null
+  first_set_tiebreak_prob?: number | null
+}
+
+/** Tournament metadata looked up by slug. */
+interface TournamentInfoRow {
+  tournament_id?: number
+  slug?: string
+  name?: string
+  country?: string
+  country_code?: string
+  city?: string
+  surface?: string
+  tourney_level?: string
+  category?: string
+  tour?: string
+  draw_size?: number
+}
+
 interface MatchSlot {
   slot: number
   status: 'completed' | 'predicted' | 'known' | 'tbd' | 'void' | 'bye'
@@ -240,7 +280,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
     const pool = getPool()
 
     // Step 1: Find tournament in reference table
-    let tournamentInfo: any = null
+    let tournamentInfo: TournamentInfoRow | null = null
     try {
       const tournamentResult = await pool.query(`
         SELECT t.tournament_id, t.slug, t.name, t.country, t.country_code,
@@ -333,7 +373,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
     }
 
     // Build a lookup for draw matches by round, deduping by player pair
-    const drawByRound: Record<string, any[]> = {}
+    const drawByRound: Record<string, DrawMatchRow[]> = {}
     const seenInRound: Record<string, Set<string>> = {}
     for (const match of drawMatchesResult.rows) {
       const round = match.round || 'R64'
@@ -530,7 +570,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
 
     // Step 4: Group predictions by round field (from prediction_log)
     // Use the stored round value instead of inferring from date
-    const predictionsByRound: Record<string, any[]> = {}
+    const predictionsByRound: Record<string, PredictionRow[]> = {}
     const seenMatches = new Set<string>()
 
     for (const pred of predictionsResult.rows) {
@@ -658,9 +698,9 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
       return equivalents[round] || [round]
     }
 
-    const predictionLookup: Record<string, any> = {}
-    const partialLookup: Record<string, any> = {}
-    const playerOnlyLookup: Record<string, any> = {}  // Fallback: match by players only
+    const predictionLookup: Record<string, PredictionRow> = {}
+    const partialLookup: Record<string, PredictionRow> = {}
+    const playerOnlyLookup: Record<string, PredictionRow> = {}  // Fallback: match by players only
     for (const round of Object.keys(predictionsByRound)) {
       for (const pred of predictionsByRound[round]) {
         // Add to primary lookup
@@ -725,7 +765,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
 
       // Get matches from ESPN round mapping (handles R128 → R32 for smaller draws)
       const espnRounds = getESPNRoundMapping(roundName, roundIndex)
-      let drawMatches: any[] = []
+      let drawMatches: DrawMatchRow[] = []
       for (const espnRound of espnRounds) {
         if (drawByRound[espnRound] && drawByRound[espnRound].length > 0) {
           // CRITICAL: Filter out matches that have already been used in previous rounds
@@ -754,7 +794,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
 
       for (let slot = 0; slot < matchCount; slot++) {
         const drawMatch = drawMatches[slot]
-        let prediction: any = null
+        let prediction: PredictionRow | null = null
 
         // If we have draw data, find matching prediction by last names
         if (drawMatch) {

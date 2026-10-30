@@ -20,12 +20,21 @@ export default function Predict() {
     }
   }, [loading, isAuthenticated, navigate])
 
-  // Show subscription modal if trial is expired
-  useEffect(() => {
+  // Open the subscription modal once the trial is known to be expired.
+  //
+  // This was an effect calling setShowSubscriptionModal, which cost an extra
+  // render pass every time it fired. Adjusting state during render, guarded by
+  // the previous values, is React's documented alternative. The guard starts
+  // null so the very first render is evaluated too, matching what the effect
+  // did on mount; dismissing still works, because this only reacts to a change
+  // in loading/isTrialExpired.
+  const [prevGate, setPrevGate] = useState<{ loading: boolean; isTrialExpired: boolean } | null>(null)
+  if (!prevGate || prevGate.loading !== loading || prevGate.isTrialExpired !== isTrialExpired) {
+    setPrevGate({ loading, isTrialExpired })
     if (!loading && isTrialExpired) {
       setShowSubscriptionModal(true)
     }
-  }, [loading, isTrialExpired])
+  }
 
   const handleTournamentSelect = (tournament: Tournament) => {
     // If trial expired, show subscription modal instead

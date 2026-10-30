@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import './Admin.css'
@@ -235,16 +235,7 @@ export default function Admin() {
     }
   }, [loading, isAuthenticated, user, navigate])
 
-  useEffect(() => {
-    if (user?.isAdmin) {
-      fetchUsers()
-      checkSystemHealth()
-      fetchAccuracyStats()
-      fetchDrawSyncStatus()
-    }
-  }, [user])
-
-  const checkSystemHealth = async () => {
+  const checkSystemHealth = useCallback(async () => {
     setSystemHealth(prev => ({ ...prev, railway: 'checking' }))
     try {
       const controller = new AbortController()
@@ -262,7 +253,17 @@ export default function Admin() {
     } catch {
       setSystemHealth({ railway: 'offline' })
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (user?.isAdmin) {
+      fetchUsers()
+      checkSystemHealth()
+      fetchAccuracyStats()
+      fetchDrawSyncStatus()
+    }
+  }, [user, checkSystemHealth])
+
 
   const fetchCronStatus = async () => {
     try {

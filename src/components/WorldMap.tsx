@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import * as d3 from 'd3'
 import * as topojson from 'topojson-client'
 import type { Topology, GeometryCollection } from 'topojson-specification'
@@ -80,7 +80,7 @@ export default function WorldMap({ onTournamentSelect }: WorldMapProps) {
   }, [])
 
   // Get countries with active or upcoming tournaments
-  const activeCountries = new Set(tournaments.map(t => t.country))
+  const activeCountries = useMemo(() => new Set(tournaments.map(t => t.country)), [tournaments])
 
   useEffect(() => {
     if (!svgRef.current || !containerRef.current) return

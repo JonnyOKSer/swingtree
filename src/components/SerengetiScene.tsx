@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react'
+import { useRef, useMemo, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
@@ -30,7 +30,7 @@ function TennisBallAsh({ position, speed }: { position: [number, number, number]
   const groupRef = useRef<THREE.Group>(null)
   const initialY = position[1]
 
-  const particles = useMemo(() => {
+  const [particles] = useState(() => {
     const points: [number, number, number][] = []
     const radius = 0.15
     for (let i = 0; i < 20; i++) {
@@ -43,7 +43,7 @@ function TennisBallAsh({ position, speed }: { position: [number, number, number]
       ])
     }
     return points
-  }, [])
+  })
 
   useFrame((state) => {
     if (!groupRef.current) return
@@ -127,7 +127,7 @@ function HorizonGlow() {
 function Stars() {
   const starsRef = useRef<THREE.Points>(null)
 
-  const [positions, phases] = useMemo(() => {
+  const [[positions, phases]] = useState<[Float32Array, number[]]>(() => {
     const pos: number[] = []
     const ph: number[] = []
     for (let i = 0; i < 200; i++) {
@@ -139,15 +139,15 @@ function Stars() {
       ph.push(Math.random() * Math.PI * 2)
     }
     return [new Float32Array(pos), ph]
-  }, [])
+  })
 
-  const sizes = useMemo(() => {
+  const [sizes] = useState<Float32Array>(() => {
     const s: number[] = []
     for (let i = 0; i < 200; i++) {
       s.push(Math.random() * 2 + 0.5)
     }
     return new Float32Array(s)
-  }, [])
+  })
 
   useFrame((state) => {
     if (!starsRef.current) return
@@ -352,7 +352,7 @@ function Ground() {
 
 // Main scene
 function Scene() {
-  const tennisBalls = useMemo(() => {
+  const [tennisBalls] = useState(() => {
     return Array.from({ length: 15 }, () => ({
       position: [
         (Math.random() - 0.5) * 8,
@@ -361,9 +361,9 @@ function Scene() {
       ] as [number, number, number],
       speed: Math.random() * 0.5 + 0.3
     }))
-  }, [])
+  })
 
-  const ashParticles = useMemo(() => {
+  const [ashParticles] = useState(() => {
     return Array.from({ length: 40 }, () => ({
       position: [
         (Math.random() - 0.5) * 10,
@@ -372,10 +372,10 @@ function Scene() {
       ] as [number, number, number],
       speed: Math.random() * 0.3 + 0.2
     }))
-  }, [])
+  })
 
   // Glowing tennis ball embers - scattered across foreground like accent lighting
-  const landedBalls = useMemo(() => {
+  const [landedBalls] = useState(() => {
     return Array.from({ length: 16 }, () => ({
       position: [
         (Math.random() - 0.5) * 12,
@@ -385,7 +385,7 @@ function Scene() {
       phase: Math.random() * Math.PI * 2,
       size: Math.random() * 0.015 + 0.018
     }))
-  }, [])
+  })
 
   return (
     <>

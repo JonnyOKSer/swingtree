@@ -4,6 +4,17 @@
 
 import type { Handler } from "@netlify/functions";
 
+
+/** The slice of an api-tennis fixture this debug endpoint reads. */
+interface TennisFixture {
+  tournament_name?: string;
+  tournament_round?: string;
+  event_type_type?: string;
+  event_first_player?: string;
+  event_second_player?: string;
+}
+
+
 const API_BASE = "https://api.api-tennis.com/tennis/";
 
 const handler: Handler = async () => {
@@ -25,13 +36,13 @@ const handler: Handler = async () => {
     const data = await response.json();
 
     // Get unique rounds for WTA Miami
-    const wtaMiami = (data.result || []).filter((f: any) =>
+    const wtaMiami = ((data.result || []) as TennisFixture[]).filter((f: TennisFixture) =>
       f.tournament_name === "Miami" &&
       f.event_type_type.toLowerCase().includes("wta singles")
     );
 
-    const rounds = [...new Set(wtaMiami.map((f: any) => f.tournament_round))];
-    const samples = wtaMiami.slice(0, 5).map((f: any) => ({
+    const rounds = [...new Set(wtaMiami.map((f: TennisFixture) => f.tournament_round))];
+    const samples = wtaMiami.slice(0, 5).map((f: TennisFixture) => ({
       round: f.tournament_round,
       player1: f.event_first_player,
       player2: f.event_second_player

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import type { Tournament } from './WorldMap'
 
 interface TournamentListViewProps {
@@ -40,14 +40,21 @@ export default function TournamentListView({ tournaments, onTournamentSelect }: 
     return a.localeCompare(b)
   })
 
-  // Expand all countries on mount for better UX
-  useEffect(() => {
+  // Expand every country whenever the tournament list changes.
+  //
+  // This used to be an effect that called setExpandedCountries, which meant an
+  // extra render pass on every change. React's documented way to adjust state
+  // in response to changed props is to do it during render, guarded by the
+  // previous value, so the adjustment happens before anything is painted.
+  const [prevTournaments, setPrevTournaments] = useState(tournaments)
+  if (tournaments !== prevTournaments) {
+    setPrevTournaments(tournaments)
     const allCountries = new Set<string>()
     Object.values(grouped).forEach(countries => {
       Object.keys(countries).forEach(country => allCountries.add(country))
     })
     setExpandedCountries(allCountries)
-  }, [tournaments])
+  }
 
   const toggleTour = (tour: string) => {
     setExpandedTours(prev => {

@@ -1,5 +1,12 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
+import type { Pool } from 'pg'
 import { getPool } from './db'
+
+/** The slice of ESPN's scoreboard payload this function actually reads. */
+interface EspnCompetitor {
+  winner?: boolean
+  athlete?: { displayName?: string }
+}
 
 // Auto-Reconcile Scheduled Function
 //
@@ -71,8 +78,8 @@ async function fetchESPNCompletedMatches(tour: 'ATP' | 'WTA'): Promise<Map<strin
           const competitors = comp.competitors || []
           if (competitors.length < 2) continue
 
-          const winner = competitors.find((c: any) => c.winner)
-          const loser = competitors.find((c: any) => !c.winner)
+          const winner = competitors.find((c: EspnCompetitor) => c.winner)
+          const loser = competitors.find((c: EspnCompetitor) => !c.winner)
 
           if (winner && loser) {
             const winnerName = winner.athlete?.displayName || ''
@@ -101,7 +108,7 @@ async function fetchESPNCompletedMatches(tour: 'ATP' | 'WTA'): Promise<Map<strin
 
 // Source 1: Fetch from match_results (our permanent results database)
 // This is the PRIMARY source - populated by capture-results from draw_matches
-async function fetchMatchResults(pool: any, cutoffDate: Date): Promise<Map<string, { winner: string; loser: string; score: string }>> {
+async function fetchMatchResults(pool: Pool, cutoffDate: Date): Promise<Map<string, { winner: string; loser: string; score: string }>> {
   const results = new Map<string, { winner: string; loser: string; score: string }>()
 
   try {
@@ -133,7 +140,7 @@ async function fetchMatchResults(pool: any, cutoffDate: Date): Promise<Map<strin
 }
 
 // Source 2: Fetch from draw_matches (ESPN-synced, 14-day window - fallback for very recent)
-async function fetchDrawMatchesCompleted(pool: any, cutoffDate: Date): Promise<Map<string, { winner: string; loser: string; score: string }>> {
+async function fetchDrawMatchesCompleted(pool: Pool, cutoffDate: Date): Promise<Map<string, { winner: string; loser: string; score: string }>> {
   const results = new Map<string, { winner: string; loser: string; score: string }>()
 
   try {

@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typecheck:functions": "tsc -p tsconfig.functions.json"
   },
   "dependencies": {
     "@netlify/functions": "^5.1.3",

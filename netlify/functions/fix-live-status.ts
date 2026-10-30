@@ -14,6 +14,18 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 import { getPool } from "./db";
 
+
+/** The slice of ESPN's scoreboard payload this function reads. */
+interface EspnCompetitor {
+  winner?: boolean;
+  athlete?: { displayName?: string };
+}
+interface EspnNote {
+  type?: string;
+  text?: string;
+}
+
+
 const ESPN_ATP_URL = 'https://site.api.espn.com/apis/site/v2/sports/tennis/atp/scoreboard';
 const ESPN_WTA_URL = 'https://site.api.espn.com/apis/site/v2/sports/tennis/wta/scoreboard';
 
@@ -67,14 +79,14 @@ async function fetchCompletedMatches(tour: 'ATP' | 'WTA'): Promise<EspnMatch[]> 
 
           const player1 = competitors[0]?.athlete?.displayName || 'TBD';
           const player2 = competitors[1]?.athlete?.displayName || 'TBD';
-          const winner = competitors.find((c: any) => c.winner)?.athlete?.displayName;
+          const winner = competitors.find((c: EspnCompetitor) => c.winner)?.athlete?.displayName;
 
           if (!winner) continue;
 
           // Extract score from notes or linescores
           let score = '';
           const notes = comp.notes || [];
-          const eventNote = notes.find((n: any) => n.type === 'event');
+          const eventNote = notes.find((n: EspnNote) => n.type === 'event');
           if (eventNote?.text) {
             // Format: "Player A (COUNTRY) bt Player B (COUNTRY) 6-4 7-5"
             const scoreMatch = eventNote.text.match(/\d+-\d+(?:\s+\d+-\d+)*/);
