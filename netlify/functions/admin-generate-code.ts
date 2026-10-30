@@ -20,7 +20,7 @@ import { getPool } from './db.js'
  * - 200: { code: "ASHE-XXXX-XXXX", expiresAt: "2026-03-17T..." }
  * - 403: { error: "Admin access required" }
  */
-export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+export const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   // Only allow POST requests
   if (event.httpMethod !== 'POST') {
     return {

@@ -17,7 +17,7 @@ import { getPool } from './db'
  *     → auto-reconcile (uses match_results for reconciliation)
  */
 
-const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+const handler: Handler = async (_event: HandlerEvent, _context: HandlerContext) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Content-Type': 'application/json'

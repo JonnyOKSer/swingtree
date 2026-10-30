@@ -122,7 +122,7 @@ function normalizeRound(roundName: string): string {
 
 function normalizeTournamentName(name: string): string {
   // Strip year suffix if present
-  let clean = name.replace(/\s+20\d{2}$/i, '').trim()
+  const clean = name.replace(/\s+20\d{2}$/i, '').trim()
 
   // Known tournament name mappings
   const mappings: Record<string, string> = {

@@ -7,7 +7,7 @@
 
 import type { Handler, HandlerEvent } from "@netlify/functions";
 import { getPool } from "./db";
-import { normalizeRound, buildMatchKey, detectTour } from "./draw-utils";
+import { normalizeRound, buildMatchKey } from "./draw-utils";
 
 const API_BASE = "https://api.api-tennis.com/tennis/";
 
@@ -34,7 +34,7 @@ function mapEventStatus(status: string | null): "upcoming" | "live" | "finished"
   return "upcoming";
 }
 
-const handler: Handler = async (event: HandlerEvent) => {
+const handler: Handler = async (_event: HandlerEvent) => {
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Content-Type": "application/json"
@@ -116,18 +116,10 @@ const handler: Handler = async (event: HandlerEvent) => {
       const roundNormalized = normalizeRound(fixture.tournament_round);
       if (roundNormalized === "UNKNOWN" || roundNormalized === fixture.tournament_round) continue;
 
-      const tour = detectTour(fixture.event_type_type);
       const status = mapEventStatus(fixture.event_status);
 
-      // Build new match key with correct round
-      const newMatchKey = buildMatchKey(
-        fixture.tournament_key,
-        roundNormalized,
-        fixture.first_player_key,
-        fixture.second_player_key
-      );
-
-      // Also build old match key with UNKNOWN
+      // The UPDATE below deliberately keeps the existing match_key, so only
+      // the UNKNOWN-round key is needed to locate the row.
       const oldMatchKey = buildMatchKey(
         fixture.tournament_key,
         "UNKNOWN",

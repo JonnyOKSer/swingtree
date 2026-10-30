@@ -14,7 +14,7 @@ import { getPool } from './db.js'
  * - 200: { user: SessionUser }
  * - 401: { error: 'Not authenticated' }
  */
-export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+export const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   // Only allow GET requests
   if (event.httpMethod !== 'GET') {
     return {

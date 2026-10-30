@@ -7,7 +7,7 @@ import type { Handler, HandlerEvent } from "@netlify/functions";
 
 const API_BASE = "https://api.api-tennis.com/tennis/";
 
-const handler: Handler = async (event: HandlerEvent) => {
+const handler: Handler = async (_event: HandlerEvent) => {
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Content-Type": "application/json"

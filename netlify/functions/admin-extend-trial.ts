@@ -20,7 +20,7 @@ import { getPool } from './db.js'
  * - 403: { error: "Admin access required" }
  * - 404: { error: "User not found" }
  */
-export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+export const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   // Only allow POST requests
   if (event.httpMethod !== 'POST') {
     return {

@@ -1,5 +1,5 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
-import { getPool, TOURNAMENT_METADATA, levelToCategory } from './db'
+import { getPool, TOURNAMENT_METADATA } from './db'
 
 interface Tournament {
   id: string
@@ -17,7 +17,7 @@ interface Tournament {
   lastPredDate?: string
 }
 
-const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   // CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',

@@ -10,7 +10,7 @@ import { createLogoutCookie, getBaseUrl } from './auth-utils.js'
  *
  * Response: 302 redirect to /
  */
-export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+export const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   // Allow both POST and GET for convenience
   if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') {
     return {

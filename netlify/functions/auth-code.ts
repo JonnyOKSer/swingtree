@@ -16,7 +16,7 @@ import { getPool } from './db.js'
  * - 200: { valid: true, tier: "tree_top", requiresOAuth: true }
  * - 401: { error: "Invalid or expired code" }
  */
-export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+export const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   // Only allow POST requests
   if (event.httpMethod !== 'POST') {
     return {

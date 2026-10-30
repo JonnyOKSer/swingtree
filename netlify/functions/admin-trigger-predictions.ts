@@ -238,17 +238,6 @@ async function triggerOraclePredictions(): Promise<{ success: boolean, data?: un
   }
 }
 
-async function getOracleStatus(): Promise<unknown> {
-  try {
-    const response = await fetch(`${ORACLE_TRIGGER_URL}/status`)
-    if (response.ok) {
-      return await response.json()
-    }
-    return { error: 'Status check failed' }
-  } catch {
-    return { error: 'Could not connect to Oracle service' }
-  }
-}
 
 export const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   // Only allow POST requests

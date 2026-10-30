@@ -200,7 +200,7 @@ function getDrawSize(level: string, actualDrawSize?: number): number {
   return LEVEL_DRAW_SIZES[level] || 32
 }
 
-const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -273,7 +273,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     const tour = requestedTour || tournamentInfo?.tour || 'ATP'
 
     // Step 2: Get all aliases for this tournament (for searching predictions)
-    let searchPatterns = [searchPattern.toLowerCase()]
+    const searchPatterns = [searchPattern.toLowerCase()]
     if (tournamentInfo?.tournament_id) {
       try {
         const aliasResult = await pool.query(`
@@ -802,7 +802,6 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
             if (prediction) {
               const predWinnerLast = extractLastName(prediction.predicted_winner)
               const player1Last = extractLastName(player1)
-              const player2Last = extractLastName(player2)
               if (predWinnerLast === player1Last) {
                 predictedWinnerDisplay = player1
               } else if (predWinnerLast === player2Last) {

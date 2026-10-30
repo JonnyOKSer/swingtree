@@ -98,7 +98,7 @@ export default function GatedEntrance() {
         setTimeout(() => setShake(false), 500)
         setCode('')
       }
-    } catch (error) {
+    } catch {
       setCodeError('Network error. Please try again.')
       setShake(true)
       setTimeout(() => setShake(false), 500)

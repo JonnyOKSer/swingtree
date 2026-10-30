@@ -19,7 +19,7 @@ import { getPool } from './db.js'
  * - 200: { users: [...], total: number, limits: { cap, current } }
  * - 403: { error: "Admin access required" }
  */
-export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+export const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   // Only allow GET requests
   if (event.httpMethod !== 'GET') {
     return {

@@ -58,13 +58,15 @@ const handler: Handler = async (event: HandlerEvent) => {
       const body = JSON.parse(event.body);
       if (body.date_start) dateStart = body.date_start;
       if (body.date_end) dateEnd = body.date_end;
-    } catch {}
+    } catch {
+      // Body is optional; fall back to defaults when absent or malformed.
+    }
   }
 
   let pool;
   try {
     pool = getPool();
-  } catch (e) {
+  } catch {
     return { statusCode: 500, headers, body: JSON.stringify({ error: "DB connection failed" }) };
   }
 

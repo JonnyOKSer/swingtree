@@ -124,7 +124,7 @@ async function fetchMatchResults(pool: any, cutoffDate: Date): Promise<Map<strin
     }
 
     console.log(`[auto-reconcile] match_results: ${resultRows.rows.length} permanent results`)
-  } catch (error) {
+  } catch {
     // Table might not exist yet - that's ok, capture-results will create it
     console.log('[auto-reconcile] match_results table not found, skipping')
   }
@@ -192,7 +192,7 @@ function extractFirstSetScore(score: string, winner: string, loser: string): { f
   }
 }
 
-const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+const handler: Handler = async (_event: HandlerEvent, _context: HandlerContext) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Content-Type': 'application/json'

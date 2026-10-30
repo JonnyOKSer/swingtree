@@ -48,9 +48,9 @@ function shortenTournamentName(name: string): string {
 
 function formatScoreWinnerFirst(
   score: string,
-  player1Name: string,
-  player2Name: string,
-  winnerName: string | null
+  _player1Name: string,
+  _player2Name: string,
+  _winnerName: string | null
 ): string {
   if (!score) return ''
 

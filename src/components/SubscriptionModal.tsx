@@ -105,9 +105,13 @@ export default function SubscriptionModal({ onClose, reason = 'voluntary' }: Sub
 
       // Redirect to Stripe Checkout
       if (data.url) {
+        // Full-page navigation to Stripe Checkout is the documented flow.
+        // react-hooks/immutability flags this because window lives outside the
+        // component — which is exactly what a redirect has to touch.
+        // eslint-disable-next-line react-hooks/immutability
         window.location.href = data.url
       }
-    } catch (err) {
+    } catch {
       setError('Something went wrong. Please try again.')
       setLoading(null)
     }
@@ -133,9 +137,13 @@ export default function SubscriptionModal({ onClose, reason = 'voluntary' }: Sub
 
       // Redirect to Stripe Portal
       if (data.url) {
+        // Full-page navigation to Stripe Checkout is the documented flow.
+        // react-hooks/immutability flags this because window lives outside the
+        // component — which is exactly what a redirect has to touch.
+        // eslint-disable-next-line react-hooks/immutability
         window.location.href = data.url
       }
-    } catch (err) {
+    } catch {
       setError('Something went wrong. Please try again.')
       setLoading(null)
     }
