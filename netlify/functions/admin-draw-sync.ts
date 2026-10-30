@@ -1,5 +1,6 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
 import { parseSessionFromCookies } from './auth-utils.js'
+import { getDisplayName } from './tournament-utils.js'
 import { getPool } from './db.js'
 
 /**
@@ -124,24 +125,12 @@ function normalizeTournamentName(name: string): string {
   // Strip year suffix if present
   const clean = name.replace(/\s+20\d{2}$/i, '').trim()
 
-  // Known tournament name mappings
-  const mappings: Record<string, string> = {
-    'bnp paribas open': 'Indian Wells',
-    'miami open presented by itau': 'Miami Open',
-    'miami open': 'Miami Open',
-    'rolex monte-carlo masters': 'Monte Carlo',
-    'mutua madrid open': 'Madrid Open',
-    'internazionali bnl d\'italia': 'Rome'
-  }
-
-  const lower = clean.toLowerCase()
-  for (const [pattern, canonical] of Object.entries(mappings)) {
-    if (lower.includes(pattern)) {
-      return canonical
-    }
-  }
-
-  return clean
+  // Everything else is the same naming problem the tournaments endpoint has,
+  // so it uses the same table. This function used to keep a second, smaller
+  // mapping of its own, which is how the two ended up disagreeing: it wrote
+  // "Monte Carlo" while the endpoint canonicalised to "Monte-Carlo Masters",
+  // and names it had never heard of went into the draw rows unchanged.
+  return getDisplayName(clean)
 }
 
 async function triggerDrawSync(pool: ReturnType<typeof getPool>): Promise<{

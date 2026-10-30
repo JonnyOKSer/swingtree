@@ -140,8 +140,15 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
         }
       }
 
-      // Only add if not already present (deduplication by canonical key + tour)
-      if (!tournamentMap.has(canonicalKey)) {
+      // Deduplication by canonical key + tour. Two rows can now reach the same
+      // key — "Toray Pan Pacific Open Tennis" and "Tokyo" are one event — so
+      // first-wins is not good enough: keep whichever row was predicted on
+      // most recently, which is the one with something left to say.
+      const existing = tournamentMap.get(canonicalKey)
+      const isFresher = !existing
+        || !existing.lastPredDate
+        || (lastPredDate && new Date(lastPredDate) > new Date(existing.lastPredDate))
+      if (isFresher) {
         tournamentMap.set(canonicalKey, {
           id: canonicalKey,
           name: displayName,
@@ -204,8 +211,11 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
             }
 
             tournamentMap.set(canonicalKey, {
-              id: row.slug ? `${row.slug}-${tour.toLowerCase()}` : canonicalKey,
-              name,
+              // The id has to be the canonical key, not the row's own slug:
+              // when the two sources name one event differently they used to
+              // land here with the same slug-derived id and show up twice.
+              id: canonicalKey,
+              name: getDisplayName(name),
               country: row.country || 'Unknown',
               countryCode: row.country_code || 'UNK',
               city: row.city || name,

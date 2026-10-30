@@ -40,6 +40,7 @@ export const TOURNAMENT_METADATA: Record<string, {
   'Monte Carlo Masters': { country: 'France', countryCode: 'FRA', city: 'Monte Carlo', category: 'ATP 1000', tour: 'ATP', surface: 'Clay' },
   'Monte Carlo': { country: 'France', countryCode: 'FRA', city: 'Monte Carlo', category: 'ATP 1000', tour: 'ATP', surface: 'Clay' },
   'Madrid Open': { country: 'Spain', countryCode: 'ESP', city: 'Madrid', category: 'ATP 1000', tour: 'ATP/WTA', surface: 'Clay' },
+  'Madrid': { country: 'Spain', countryCode: 'ESP', city: 'Madrid', category: 'ATP 1000', tour: 'ATP/WTA', surface: 'Clay' },
   'Madrid Masters': { country: 'Spain', countryCode: 'ESP', city: 'Madrid', category: 'ATP 1000', tour: 'ATP/WTA', surface: 'Clay' },
   'Italian Open': { country: 'Italy', countryCode: 'ITA', city: 'Rome', category: 'ATP 1000', tour: 'ATP/WTA', surface: 'Clay' },
   'Rome Masters': { country: 'Italy', countryCode: 'ITA', city: 'Rome', category: 'ATP 1000', tour: 'ATP/WTA', surface: 'Clay' },
@@ -51,6 +52,15 @@ export const TOURNAMENT_METADATA: Record<string, {
   'Shanghai Masters': { country: 'China', countryCode: 'CHN', city: 'Shanghai', category: 'ATP 1000', tour: 'ATP', surface: 'Hard' },
   'Shanghai': { country: 'China', countryCode: 'CHN', city: 'Shanghai', category: 'ATP 1000', tour: 'ATP', surface: 'Hard' },
   'Paris Masters': { country: 'France', countryCode: 'FRA', city: 'Paris', category: 'ATP 1000', tour: 'ATP', surface: 'Hard' },
+  'Paris': { country: 'France', countryCode: 'FRA', city: 'Paris', category: 'ATP 1000', tour: 'ATP', surface: 'Hard' },
+  'Canada': { country: 'Canada', countryCode: 'CAN', city: 'Toronto/Montreal', category: 'ATP 1000', tour: 'ATP/WTA', surface: 'Hard' },
+
+  // WTA 1000 — these reach us under a sponsor's name, which canonicalises to
+  // the bare city, so the city has to be a key here or the map loses them.
+  'Wuhan': { country: 'China', countryCode: 'CHN', city: 'Wuhan', category: 'WTA 1000', tour: 'WTA', surface: 'Hard' },
+  'Ningbo': { country: 'China', countryCode: 'CHN', city: 'Ningbo', category: 'WTA 500', tour: 'WTA', surface: 'Hard' },
+  'Guangzhou': { country: 'China', countryCode: 'CHN', city: 'Guangzhou', category: 'WTA 250', tour: 'WTA', surface: 'Hard' },
+  'Mallorca': { country: 'Spain', countryCode: 'ESP', city: 'Mallorca', category: 'WTA 125', tour: 'WTA', surface: 'Hard' },
 
   // ATP 500
   'Dubai Championships': { country: 'United Arab Emirates', countryCode: 'ARE', city: 'Dubai', category: 'ATP 500', tour: 'ATP/WTA', surface: 'Hard' },
