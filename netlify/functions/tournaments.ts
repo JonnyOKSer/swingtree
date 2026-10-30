@@ -1,5 +1,6 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
 import { getPool, TOURNAMENT_METADATA } from './db'
+import { getDisplayName, getCanonicalKey, ROUND_DISPLAY } from './tournament-utils'
 
 interface Tournament {
   id: string
@@ -35,41 +36,6 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
 
     const tournamentMap = new Map<string, Tournament>()
 
-    // Normalize tournament names to avoid duplicates (e.g., "Indian Wells Masters" -> "Indian Wells")
-    function normalizeName(name: string): string {
-      return name
-        .replace(/ Masters$/i, '')
-        .replace(/ Open$/i, '')
-        .replace(/ Championships$/i, '')
-        .trim()
-    }
-
-    // Map tournament names to canonical display names
-    function getDisplayName(name: string): string {
-      const normalized = normalizeName(name).toLowerCase()
-      if (normalized.includes('indian wells') || normalized.includes('bnp paribas')) return 'Indian Wells'
-      if (normalized.includes('miami')) return 'Miami Open'
-      if (normalized.includes('monte carlo') || normalized.includes('monte-carlo')) return 'Monte-Carlo Masters'
-      if (normalized.includes('roland garros') || normalized.includes('french')) return 'Roland Garros'
-      return normalizeName(name)
-    }
-
-    // Get canonical tournament name for deduplication
-    // Include tour in key so ATP and WTA draws show separately
-    function getCanonicalKey(name: string, tour: string = 'ATP'): string {
-      const normalized = normalizeName(name).toLowerCase()
-      let base = normalized
-      // Map common variations to canonical names
-      if (normalized.includes('indian wells') || normalized.includes('bnp paribas')) base = 'indian-wells'
-      else if (normalized.includes('miami')) base = 'miami'
-      else if (normalized.includes('monte carlo') || normalized.includes('monte-carlo')) base = 'monte-carlo'
-      else if (normalized.includes('roland garros') || normalized.includes('french')) base = 'roland-garros'
-      else base = normalized.replace(/[^a-z0-9]/g, '-')
-
-      // For combined events, keep separate entries for ATP and WTA
-      // Grand Slams and shared 1000s have both tours
-      return `${base}-${tour.toLowerCase()}`
-    }
 
     // Get tournaments with recent predictions (active tournaments)
     // A tournament is "active" if it has predictions in the last 14 days
@@ -128,15 +94,6 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
     `)
 
     // Map round codes to display names
-    const ROUND_DISPLAY: Record<string, string> = {
-      'F': 'Final',
-      'SF': 'Semifinals',
-      'QF': 'Quarterfinals',
-      'R16': 'Round of 16',
-      'R32': 'Round of 32',
-      'R64': 'Round of 64',
-      'R128': 'Round of 128'
-    }
 
     for (const row of recentPredictionsResult.rows) {
       const name = row.tournament
