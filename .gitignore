@@ -30,3 +30,6 @@ dist-ssr
 
 # Netlify
 .netlify/
+
+# Test coverage output
+coverage/
