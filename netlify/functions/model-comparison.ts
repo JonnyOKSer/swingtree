@@ -1,5 +1,6 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
 import { getPool } from './db'
+import { parseSessionFromCookies } from './auth-utils.js'
 
 interface ModelStats {
   modelName: string
@@ -56,6 +57,17 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
 
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' }
+  }
+
+  // Admin-only data. These endpoints are reached from the admin page and
+  // documented as admin-only, but nothing was checking.
+  const session = parseSessionFromCookies(event.headers.cookie)
+  if (!session || !session.isAdmin) {
+    return {
+      statusCode: 403,
+      headers,
+      body: JSON.stringify({ success: false, error: 'Admin access required' })
+    }
   }
 
   try {

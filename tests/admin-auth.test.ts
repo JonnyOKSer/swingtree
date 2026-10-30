@@ -13,6 +13,17 @@ const ENDPOINTS = [
   { name: 'admin-generate-code', method: 'POST' },
 ] as const
 
+/**
+ * Reached only from the admin page and documented as admin-only, but they
+ * answered anybody. They have no method restriction, so they are checked for
+ * authorisation alone.
+ */
+const ADMIN_DATA_ENDPOINTS = [
+  'wagering-strategies',
+  'accuracy-stats',
+  'model-comparison',
+] as const
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let auth: any
 
@@ -113,5 +124,42 @@ describe('admin privilege is read from the token, not the database', () => {
     query.mockResolvedValue({ rows: [{ id: 42, is_admin: false }] })
     const res = await handler(req('GET', `ashe-session=${token(true)}`), {})
     expect(res.statusCode).not.toBe(403)
+  })
+})
+
+
+describe.each(ADMIN_DATA_ENDPOINTS)('%s is admin-only', (name) => {
+  it('refuses an anonymous request', async () => {
+    const handler = await load(name)
+    expect((await handler(req('GET'), {})).statusCode).toBe(403)
+  })
+
+  it('refuses a signed-in non-admin', async () => {
+    const handler = await load(name)
+    const res = await handler(req('GET', `ashe-session=${token(false)}`), {})
+    expect(res.statusCode).toBe(403)
+    expect(JSON.parse(res.body).error).toMatch(/admin/i)
+  })
+
+  it('refuses a forged token', async () => {
+    const handler = await load(name)
+    expect((await handler(req('GET', 'ashe-session=forged'), {})).statusCode).toBe(403)
+  })
+
+  it('reads no data when authorisation fails', async () => {
+    const handler = await load(name)
+    await handler(req('GET', `ashe-session=${token(false)}`), {})
+    expect(query).not.toHaveBeenCalled()
+  })
+
+  it('lets a real admin past the gate', async () => {
+    const handler = await load(name)
+    expect((await handler(req('GET', `ashe-session=${token(true)}`), {})).statusCode).not.toBe(403)
+  })
+
+  it('still answers CORS preflight', async () => {
+    const handler = await load(name)
+    const res = await handler({ httpMethod: 'OPTIONS', headers: {} }, {})
+    expect(res.statusCode).toBe(200)
   })
 })
