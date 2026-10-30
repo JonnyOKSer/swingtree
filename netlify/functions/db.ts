@@ -69,6 +69,7 @@ export const TOURNAMENT_METADATA: Record<string, {
   'Qatar ExxonMobil Open': { country: 'Qatar', countryCode: 'QAT', city: 'Doha', category: 'ATP 250', tour: 'ATP', surface: 'Hard' },
   'Doha': { country: 'Qatar', countryCode: 'QAT', city: 'Doha', category: 'ATP 250', tour: 'ATP', surface: 'Hard' },
   'Rotterdam': { country: 'Netherlands', countryCode: 'NLD', city: 'Rotterdam', category: 'ATP 500', tour: 'ATP', surface: 'Hard' },
+  'Antwerp': { country: 'Belgium', countryCode: 'BEL', city: 'Antwerp', category: 'ATP 250', tour: 'ATP', surface: 'Hard' },
   'Acapulco': { country: 'Mexico', countryCode: 'MEX', city: 'Acapulco', category: 'ATP 500', tour: 'ATP/WTA', surface: 'Hard' },
   'Barcelona': { country: 'Spain', countryCode: 'ESP', city: 'Barcelona', category: 'ATP 500', tour: 'ATP', surface: 'Clay' },
   'Barcelona Open': { country: 'Spain', countryCode: 'ESP', city: 'Barcelona', category: 'ATP 500', tour: 'ATP', surface: 'Clay' },

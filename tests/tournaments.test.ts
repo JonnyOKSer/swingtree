@@ -127,6 +127,16 @@ describe('sponsored and official names of one event', () => {
 })
 
 describe('events that must NOT be merged', () => {
+  it('does not file a sponsor-sharing event under the wrong tournament', () => {
+    // BNP Paribas sponsors both Indian Wells and the European Open in
+    // Antwerp. Matching the sponsor anywhere in the name put the October
+    // ATP 250 on the map as the March Masters 1000.
+    expect(getCanonicalKey('BNP Paribas Fortis European Open', 'ATP'))
+      .not.toBe(getCanonicalKey('BNP Paribas Open', 'ATP'))
+    expect(getDisplayName('BNP Paribas Fortis European Open')).toBe('Antwerp')
+    expect(getDisplayName('BNP Paribas Open')).toBe('Indian Wells')
+  })
+
   it('keeps two events in one city apart', () => {
     // London holds Wimbledon and Queen's; Madrid holds the 1000 and a WTA 125.
     expect(getCanonicalKey('Wimbledon', 'ATP')).not.toBe(getCanonicalKey("Queen's Club", 'ATP'))

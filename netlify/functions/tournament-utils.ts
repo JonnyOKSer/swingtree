@@ -75,6 +75,11 @@ const EVENT_CITY: Record<string, string> = {
   'japan': 'Tokyo',
   'china': 'Beijing',
   'bnp paribas': 'Indian Wells',
+  // Antwerp's sponsor is also BNP Paribas. The old rule matched 'bnp paribas'
+  // anywhere in the name and filed this October ATP 250 under Indian Wells,
+  // a March Masters 1000 — which is why an alias now has to end the name.
+  'bnp paribas fortis european': 'Antwerp',
+  'european': 'Antwerp',
   'indian wells': 'Indian Wells',
   'western & southern': 'Cincinnati',
   'western and southern': 'Cincinnati',
