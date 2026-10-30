@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { Tournament } from './WorldMap'
+import { useAuth } from '../context/AuthContext'
+import { isTournamentAccessible } from '../lib/tierAccess'
 
 interface TournamentListViewProps {
   tournaments: Tournament[]
@@ -13,6 +15,7 @@ interface GroupedTournaments {
 }
 
 export default function TournamentListView({ tournaments, onTournamentSelect }: TournamentListViewProps) {
+  const { tierAccess } = useAuth()
   const [expandedTours, setExpandedTours] = useState<Set<string>>(new Set(['ATP', 'WTA']))
   const [expandedCountries, setExpandedCountries] = useState<Set<string>>(new Set())
 
@@ -166,21 +169,31 @@ export default function TournamentListView({ tournaments, onTournamentSelect }: 
                             const statusOrder = { active: 0, upcoming: 1, completed: 2 }
                             return statusOrder[a.status] - statusOrder[b.status]
                           })
-                          .map(tournament => (
-                            <div
-                              key={`${tour}-${tournament.id}`}
-                              className={`tournament-row ${tournament.status} tour-${tournament.tour.toLowerCase().replace('/', '-')}`}
-                              onClick={() => onTournamentSelect(tournament)}
-                            >
-                              <div className="tournament-info">
-                                <span className="tournament-name">{tournament.name}</span>
-                                <span className="tournament-meta">
-                                  {tournament.surface} • {tournament.category}
-                                </span>
+                          .map(tournament => {
+                            // Mark what this plan cannot open, so nobody clicks
+                            // through only to be refused. The server is what
+                            // actually enforces this.
+                            const locked = !isTournamentAccessible(tournament.category, tierAccess)
+                            return (
+                              <div
+                                key={`${tour}-${tournament.id}`}
+                                className={`tournament-row ${tournament.status} tour-${tournament.tour.toLowerCase().replace('/', '-')}${locked ? ' tournament-locked' : ''}`}
+                                onClick={() => onTournamentSelect(tournament)}
+                                title={locked ? 'Upgrade to open this draw' : undefined}
+                              >
+                                <div className="tournament-info">
+                                  <span className="tournament-name">
+                                    {locked && <span aria-label="Locked">🔒 </span>}
+                                    {tournament.name}
+                                  </span>
+                                  <span className="tournament-meta">
+                                    {tournament.surface} • {tournament.category}
+                                  </span>
+                                </div>
+                                {renderStatus(tournament)}
                               </div>
-                              {renderStatus(tournament)}
-                            </div>
-                          ))}
+                            )
+                          })}
                       </div>
                     )}
                   </div>

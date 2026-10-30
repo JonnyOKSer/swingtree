@@ -51,3 +51,12 @@ a {
 a:hover {
   opacity: 0.8;
 }
+
+/* A tournament the current plan cannot open. Still clickable — the draw view
+   explains the upgrade — but visibly set apart from the rest. */
+.tournament-row.tournament-locked {
+  opacity: 0.55;
+}
+.tournament-row.tournament-locked:hover {
+  opacity: 0.75;
+}

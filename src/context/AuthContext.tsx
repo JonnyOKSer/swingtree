@@ -1,4 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { accessForTier, type TierAccess } from '../lib/tierAccess'
+
+export { isTournamentAccessible, TIER_ACCESS, type TierAccess } from '../lib/tierAccess'
 import type { ReactNode } from 'react'
 
 // User session from the auth-session endpoint
@@ -14,17 +17,6 @@ export interface User {
 }
 
 // Feature access based on tier
-export interface TierAccess {
-  // All tiers see all confidence labels (STRONG, CONFIDENT, PICK, SKIP)
-  allTournaments: boolean      // false for baseline (Slams + Masters only)
-  firstSetWinner: boolean      // false for baseline
-  firstSetScore: boolean       // only tree_top
-  overUnder: boolean           // false for baseline
-  divergence: boolean          // false for baseline
-  disruption: boolean          // only tree_top
-  earlyAccess: boolean         // only tree_top
-  parlay: boolean              // only tree_top - ASHE's parlay picks
-}
 
 export interface AuthContextType {
   user: User | null
@@ -41,60 +33,6 @@ export interface AuthContextType {
 }
 
 // Default tier access (trial gets full access during trial period)
-const TIER_ACCESS: Record<string, TierAccess> = {
-  trial: {
-    allTournaments: true,
-    firstSetWinner: true,
-    firstSetScore: true,
-    overUnder: true,
-    divergence: true,
-    disruption: true,
-    earlyAccess: true,
-    parlay: true
-  },
-  baseline: {
-    allTournaments: false,  // Slams + Masters only
-    firstSetWinner: false,
-    firstSetScore: false,
-    overUnder: false,
-    divergence: false,
-    disruption: false,
-    earlyAccess: false,
-    parlay: false
-  },
-  all_court: {
-    allTournaments: true,
-    firstSetWinner: true,
-    firstSetScore: false,   // only tree_top
-    overUnder: true,
-    divergence: true,
-    disruption: false,      // only tree_top
-    earlyAccess: false,     // only tree_top
-    parlay: false           // only tree_top
-  },
-  tree_top: {
-    allTournaments: true,
-    firstSetWinner: true,
-    firstSetScore: true,
-    overUnder: true,
-    divergence: true,
-    disruption: true,
-    earlyAccess: true,
-    parlay: true
-  }
-}
-
-// Expired trial gets no access
-const EXPIRED_ACCESS: TierAccess = {
-  allTournaments: false,
-  firstSetWinner: false,
-  firstSetScore: false,
-  overUnder: false,
-  divergence: false,
-  disruption: false,
-  earlyAccess: false,
-  parlay: false
-}
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
@@ -175,10 +113,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Get tier access based on user's tier and status
   const tierAccess = (() => {
-    if (!user) return EXPIRED_ACCESS
-    if (isTrialExpired) return EXPIRED_ACCESS
-    if (user.status === 'expired') return EXPIRED_ACCESS
-    return TIER_ACCESS[user.tier] || EXPIRED_ACCESS
+    if (!user) return accessForTier('expired')
+    if (isTrialExpired) return accessForTier('expired')
+    if (user.status === 'expired') return accessForTier('expired')
+    return accessForTier(user.tier)
   })()
 
   // Subscription status helpers
@@ -215,26 +153,3 @@ export function useAuth(): AuthContextType {
   return context
 }
 
-/**
- * Check if a tournament is accessible for the given tier
- * Baseline only has access to Grand Slams and Masters 1000
- */
-export function isTournamentAccessible(
-  category: string,
-  tierAccess: TierAccess
-): boolean {
-  if (tierAccess.allTournaments) return true
-
-  // Baseline: only Grand Slams and Masters 1000
-  const allowedCategories = [
-    'Grand Slam',
-    'ATP 1000',
-    'WTA 1000',
-    'ATP Finals',
-    'WTA Finals'
-  ]
-
-  return allowedCategories.some(allowed =>
-    category.toLowerCase().includes(allowed.toLowerCase())
-  )
-}

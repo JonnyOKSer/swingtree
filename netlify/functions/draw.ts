@@ -1,5 +1,7 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
-import { getPool, TOURNAMENT_METADATA } from './db'
+import { getPool, TOURNAMENT_METADATA, levelToCategory } from './db'
+import { parseSessionFromCookies, getEffectiveStatus } from './auth-utils.js'
+import { accessForTier, isTournamentAccessible } from '../../src/lib/tierAccess'
 
 // ESPN API endpoints for hybrid draw data
 const ESPN_ATP_URL = 'https://site.api.espn.com/apis/site/v2/sports/tennis/atp/scoreboard'
@@ -96,17 +98,22 @@ function getConfidenceTier(prob: number): string {
 
 /** A row of draw_matches, as read by this endpoint. */
 interface DrawMatchRow {
+  match_key?: string
+  round?: string
   player_1_name: string
   player_2_name: string
   status?: string
   winner_name?: string | null
   final_result?: string | null
+  source?: string
 }
 
 /** A prediction row joined to a draw match. */
 interface PredictionRow {
-  player1_name?: string
-  player2_name?: string
+  match_key?: string
+  prediction_date?: string | Date | null
+  player1_name: string
+  player2_name: string
   predicted_winner?: string | null
   predicted_prob?: number | null
   confidence_tier?: string | null
@@ -251,6 +258,22 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
     return { statusCode: 200, headers, body: '' }
   }
 
+  // Draws are the paid product, but this endpoint used to answer anybody, so
+  // the predictions were one unauthenticated fetch away.
+  const session = parseSessionFromCookies(event.headers.cookie)
+  if (!session) {
+    return {
+      statusCode: 401,
+      headers,
+      body: JSON.stringify({ success: false, error: 'Not authenticated' })
+    }
+  }
+
+  // An expired trial still carries its old tier string, so resolve the
+  // effective status before deciding what this session may open.
+  const effectiveStatus = getEffectiveStatus(session.tier, session.status, session.trialEnd)
+  const tierAccess = accessForTier(effectiveStatus === 'expired' ? 'expired' : session.tier)
+
   try {
     const pathParts = event.path.split('/')
     let tournamentSlug = pathParts[pathParts.length - 1]
@@ -311,6 +334,32 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
 
     // Determine tour to filter by (from request, tournament info, or default to ATP)
     const tour = requestedTour || tournamentInfo?.tour || 'ATP'
+
+    // Enforce the tier's tournament access before any predictions are built.
+    // Baseline is sold as "Grand Slams + Masters only"; until now nothing
+    // checked it, so every tier could open every draw.
+    // Only derive a category when the tournament is actually known. Without a
+    // row, tourneyLevel falls back to 'M', which would resolve to a Masters
+    // event and let a restricted tier open any unrecognised slug.
+    const tournamentCategory = tournamentInfo
+      ? (tournamentInfo.category || levelToCategory(tourneyLevel, tour))
+      : ''
+    if (!isTournamentAccessible(tournamentCategory, tierAccess)) {
+      return {
+        statusCode: 403,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'Upgrade required',
+          reason: effectiveStatus === 'expired' ? 'trial_expired' : 'tier_restricted',
+          tournament: tournamentInfo?.name || tournamentSlug,
+          category: tournamentCategory,
+          message: effectiveStatus === 'expired'
+            ? 'Your trial has ended. Subscribe to keep reading the draws.'
+            : 'Your plan covers Grand Slams and Masters events. Upgrade to open this draw.'
+        })
+      }
+    }
 
     // Step 2: Get all aliases for this tournament (for searching predictions)
     const searchPatterns = [searchPattern.toLowerCase()]

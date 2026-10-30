@@ -302,6 +302,7 @@ export default function DrawSheet({
   const [drawData, setDrawData] = useState<DrawData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [locked, setLocked] = useState<{ message: string; reason: string } | null>(null)
   const [tickerMatches, setTickerMatches] = useState<MatchResult[]>([])
   const [parlayRound, setParlayRound] = useState<string | null>(null)
   const bracketRef = useRef<HTMLDivElement>(null)
@@ -365,6 +366,11 @@ export default function DrawSheet({
 
   useEffect(() => {
     const fetchDraw = async () => {
+      // Clear the previous tournament's outcome, or a stale error or lock
+      // keeps winning the render even after the new draw loads fine.
+      setError(null)
+      setLocked(null)
+      setLoading(true)
       try {
         // Include tour in slug for proper filtering (e.g., "indian-wells-wta")
         const baseSlug = tournamentName.toLowerCase().replace(/[^a-z0-9]/g, '-')
@@ -378,6 +384,16 @@ export default function DrawSheet({
           } else {
             setError(data.error || 'Failed to load draw')
           }
+        } else if (response.status === 403) {
+          // The plan does not cover this tournament. That is an upsell, not a
+          // failure, so it must not read as "something went wrong".
+          const data = await response.json().catch(() => ({}))
+          setLocked({
+            message: data.message || 'Upgrade to open this draw.',
+            reason: data.reason || 'tier_restricted',
+          })
+        } else if (response.status === 401) {
+          setError('Please sign in to view this draw')
         } else {
           setError('Failed to load draw')
         }
@@ -495,6 +511,15 @@ export default function DrawSheet({
           {loading ? (
             <div className="draw-loading">
               <p>Loading bracket...</p>
+            </div>
+          ) : locked ? (
+            <div className="draw-error">
+              <p>🔒 {locked.message}</p>
+              <p className="draw-error-sub">
+                {locked.reason === 'trial_expired'
+                  ? 'Subscribe to keep reading the draws.'
+                  : 'Grand Slams and Masters events are included in your plan.'}
+              </p>
             </div>
           ) : error ? (
             <div className="draw-error">

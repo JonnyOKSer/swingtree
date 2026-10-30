@@ -12,6 +12,7 @@
 
 import type { Handler, HandlerEvent } from "@netlify/functions";
 import { getPool } from "./db";
+import { parseSessionFromCookies } from "./auth-utils.js";
 import { ROUND_ORDER, sortRounds, TIER_EMOJI } from "./draw-utils";
 
 // ============================================================================
@@ -324,6 +325,17 @@ const handler: Handler = async (event: HandlerEvent) => {
 
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 200, headers, body: "" };
+  }
+
+  // This returns the same draw-plus-prediction payload as /api/draw. It is not
+  // called by the app, but it answered anonymously, which made it a way around
+  // the paywall on /api/draw. Require a session here too.
+  if (!parseSessionFromCookies(event.headers.cookie)) {
+    return {
+      statusCode: 401,
+      headers,
+      body: JSON.stringify({ ok: false, error: "Not authenticated" })
+    };
   }
 
   try {
