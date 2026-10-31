@@ -22,6 +22,7 @@
 
 import type { Handler, Config } from "@netlify/functions";
 import { getPool } from "./db.js";
+import { evaluateCronHealth, type CronStatus } from "./watchdog-rules.js";
 
 // Extend function timeout to handle Railway cold starts (can take 40+ seconds)
 export const config: Config = {
@@ -189,88 +190,15 @@ async function checkPredictionStatus(): Promise<CheckResult> {
 }
 
 async function checkCronHealth(): Promise<CheckResult> {
-  // Check if crons are actually running by looking at cron status
+  // The rules live in watchdog-rules.ts so they can be tested; this function
+  // is only responsible for fetching the status document.
   try {
     const response = await fetch(`${TENNIS_ORACLE_URL}/cron/status`, {
       signal: AbortSignal.timeout(HEALTH_CHECK_TIMEOUT)
     });
 
     if (response.ok) {
-      const data = await response.json();
-      const lastRuns = data.last_successful_runs || {};
-      const freshness = data.data_freshness || {};
-      const unreconciled = data.unreconciled_3d || 0;
-
-      // Consider both cron_runs entries AND actual data writes.
-      // Some Railway crons update tables without logging to cron_runs;
-      // trusting the data timestamps catches real staleness accurately.
-      const candidates: Date[] = [];
-      for (const [, lastRun] of Object.entries(lastRuns)) {
-        if (lastRun) candidates.push(new Date(lastRun as string));
-      }
-      if (freshness.last_reconcile) candidates.push(new Date(freshness.last_reconcile));
-      if (freshness.last_draw_sync) candidates.push(new Date(freshness.last_draw_sync));
-
-      const mostRecentRun = candidates.length
-        ? new Date(Math.max(...candidates.map(d => d.getTime())))
-        : null;
-
-      // Separate freshness readings for granular alerts
-      const hoursSinceReconcile = freshness.last_reconcile
-        ? (Date.now() - new Date(freshness.last_reconcile).getTime()) / 3.6e6
-        : Infinity;
-      const hoursSinceDrawSync = freshness.last_draw_sync
-        ? (Date.now() - new Date(freshness.last_draw_sync).getTime()) / 3.6e6
-        : Infinity;
-
-      if (mostRecentRun) {
-        const hoursSince = (Date.now() - mostRecentRun.getTime()) / 3.6e6;
-
-        // If nothing has moved in 24+ hours, everything's stalled
-        if (hoursSince > 24) {
-          return {
-            healthy: false,
-            message: `Crons stale: ${hoursSince.toFixed(0)}h since last activity`,
-            details: { hoursSince, unreconciled, lastRuns, freshness }
-          };
-        }
-
-        // Draw sync should touch draw_matches every ~30 min during an event.
-        // Alert if it hasn't in 3h+ AND we have predictions today (active event).
-        if (hoursSinceDrawSync > 3 && (data.predictions_today || 0) > 0) {
-          return {
-            healthy: false,
-            message: `Draw sync stale: ${hoursSinceDrawSync.toFixed(1)}h since draw_matches updated`,
-            details: { hoursSinceDrawSync, hoursSinceReconcile, unreconciled, freshness }
-          };
-        }
-
-        // Reconciliation should touch prediction_log at least once every 6h.
-        if (hoursSinceReconcile > 6) {
-          return {
-            healthy: false,
-            message: `Reconciliation stale: ${hoursSinceReconcile.toFixed(1)}h since last reconcile`,
-            details: { hoursSinceReconcile, unreconciled, freshness }
-          };
-        }
-
-        // If >50 unreconciled predictions in 3 days, reconciliation is stuck
-        if (unreconciled > 50) {
-          return {
-            healthy: false,
-            message: `Reconciliation backlog: ${unreconciled} unreconciled`,
-            details: { hoursSince, unreconciled, lastRuns, freshness }
-          };
-        }
-
-        return {
-          healthy: true,
-          message: `Crons OK (${hoursSince.toFixed(1)}h ago, ${unreconciled} unreconciled, draws ${hoursSinceDrawSync.toFixed(1)}h, reconcile ${hoursSinceReconcile.toFixed(1)}h)`,
-          details: { hoursSince, unreconciled, hoursSinceReconcile, hoursSinceDrawSync }
-        };
-      }
-
-      return { healthy: false, message: "No cron history or data-freshness signals", details: data };
+      return evaluateCronHealth(await response.json() as CronStatus);
     }
     return { healthy: false, message: `Cron status check failed: HTTP ${response.status}` };
   } catch (error) {

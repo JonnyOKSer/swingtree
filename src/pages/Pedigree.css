@@ -173,3 +173,13 @@
     padding: 24px;
   }
 }
+
+/* Sample size under each figure — a percentage without its n is a claim,
+   not a result. */
+.pedigree-sample {
+  margin: 8px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: #7A7468;
+  text-transform: uppercase;
+}
