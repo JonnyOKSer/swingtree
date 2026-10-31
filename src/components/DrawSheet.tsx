@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { bracketScrollLeft } from '../lib/bracketScroll'
 import { useFeatureAccess } from './TierGate'
 import AsheTicker, { type MatchResult } from './AsheTicker'
 import './DrawSheet.css'
@@ -409,15 +410,27 @@ export default function DrawSheet({
 
   // Scroll to current round on load
   useEffect(() => {
-    if (drawData && bracketRef.current) {
-      // Find the current round column and scroll to it
-      const currentRoundName = drawData.tournament.current_round
-      const roundIndex = drawData.rounds.findIndex(r => r.display_name === currentRoundName)
-      if (roundIndex > 0) {
-        const columnWidth = 240 // approximate column width
-        bracketRef.current.scrollLeft = Math.max(0, (roundIndex - 1) * columnWidth)
-      }
-    }
+    const bracket = bracketRef.current
+    if (!drawData || !bracket) return
+
+    const currentRoundName = drawData.tournament.current_round
+    const roundIndex = drawData.rounds.findIndex(r => r.display_name === currentRoundName)
+    if (roundIndex <= 0) return
+
+    const columns = Array.from(bracket.querySelectorAll<HTMLElement>('.round-column'))
+    if (columns.length === 0) return
+
+    // Measure the columns rather than assuming a width: --card-width is a
+    // media-query token, so a hard-coded guess clips a column on every phone.
+    const contentOrigin = bracket.getBoundingClientRect().left - bracket.scrollLeft
+    const styles = window.getComputedStyle(bracket)
+
+    bracket.scrollLeft = bracketScrollLeft({
+      columnLefts: columns.map(column => column.getBoundingClientRect().left - contentOrigin),
+      roundIndex,
+      maxScroll: bracket.scrollWidth - bracket.clientWidth,
+      gutter: parseFloat(styles.paddingLeft) || 0,
+    })
   }, [drawData])
 
   const tournamentInfo = drawData?.tournament || {
